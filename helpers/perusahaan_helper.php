@@ -393,8 +393,7 @@ if (!function_exists('format_perusahaan_info')) {
      */
     function format_perusahaan_info($perusahaan, $for = '')
     {
-        $format = get_option('perusahaan_info_format');
-
+        $format = get_option('company_info_format');
         $countryCode = '';
         $countryName = '';
 
@@ -422,18 +421,20 @@ if (!function_exists('format_perusahaan_info')) {
             $email = '<a href="mailto:' . $perusahaan->email . '">' . $perusahaan->email . '</a>';
         }
 
-        $format = _info_format_replace('perusahaan_to', $perusahaanTo, $format);
-        $format = _info_format_replace('address', $perusahaan->address, $format);
-        $format = _info_format_replace('city', $perusahaan->city, $format);
-        $format = _info_format_replace('state', $perusahaan->state, $format);
+        $format = _info_format_replace('company_name', $perusahaanTo, $format);
+        $format = _info_format_replace('address', $perusahaan->address .' '. $perusahaan->city, $format);
+
+        $format = _info_format_replace('city', NULL, $format);
+        $format = _info_format_replace('state', $perusahaan->state .' '. $perusahaan->zip, $format);
 
         $format = _info_format_replace('country_code', $countryCode, $format);
         $format = _info_format_replace('country_name', $countryName, $format);
 
-        $format = _info_format_replace('zip_code', $perusahaan->zip, $format);
+        $format = _info_format_replace('zip_code', '', $format);
         $format = _info_format_replace('phone', $phone, $format);
         $format = _info_format_replace('email', $email, $format);
-
+        $format = _info_format_replace('vat_number_with_label', NULL, $format);
+        
         $whereCF = [];
         if (is_custom_fields_for_customers_portal()) {
             $whereCF['show_on_client_portal'] = 1;
