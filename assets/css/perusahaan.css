@@ -1,0 +1,40 @@
+
+.perusahaan-update{ background-color:#ddd; }
+
+body #perusahaan-preview .perusahaan-items table tbody td.description span{
+    color: #d1d3ea !important;
+}
+
+.customers.viewperusahaan #wrapper{
+    margin-left: 0;
+}
+
+@media (max-width: 1430px){
+    .customers.viewperusahaan .panel_s {
+        width: 100%;
+    }
+}
+
+tr.has-row-options-2 a,
+tr.has-row-options-2,
+tr.perusahaan_status_2 {
+    background: #004803;
+}
+
+tr.has-row-options-1 a,
+tr.has-row-options-1,
+tr.perusahaan_status_1 {
+    background: #b7ab00;
+    color: #000;
+}
+
+.customers.perusahaan-view #wrapper {
+    margin-left: 0;
+}
+
+body table.perusahaan-items-preview td.description span strong{
+    color: #ececec !important;
+}
+body table.perusahaan-items-preview td.description span {
+    color: #989898 !important;
+}
