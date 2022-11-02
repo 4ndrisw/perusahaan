@@ -71,7 +71,7 @@ class Myperusahaan extends ClientsController
             $number_word_lang_rel_id = $perusahaan->rel_id;
         }
         $this->load->library('app_number_to_word', [
-            'client_id' => $number_word_lang_rel_id,
+            'clientid' => $number_word_lang_rel_id,
         ],'numberword');
 
         $this->disableNavigation();
