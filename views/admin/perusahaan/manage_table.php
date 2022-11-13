@@ -24,7 +24,7 @@
             <div class="panel_s mbot10">
                <div class="panel-body _buttons">
                   <?php if(has_permission('perusahaan','','create')){ ?>
-                  <a href="<?php echo admin_url('perusahaan/perusahaan'); ?>" class="btn btn-info pull-left display-block">
+                  <a href="<?php echo admin_url('perusahaan/add_perusahaan'); ?>" class="btn btn-info pull-left display-block">
                   <?php echo _l('new_perusahaan'); ?>
                   </a>
                   <?php } ?>

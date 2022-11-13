@@ -112,7 +112,7 @@ $tbltotal .= '</table>';
 
 $pdf->writeHTML($tbltotal, true, false, false, false, '');
 
-if (get_option('total_to_words_enabled') == 1) {
+if (get_option('perusahaan_total_to_words_enabled') == 1) {
     // Set the font bold
     $pdf->SetFont($font_name, 'B', $font_size);
     $pdf->writeHTMLCell('', '', '', '', _l('num_word') . ': ' . $CI->numberword->convert($perusahaan->total, $perusahaan->currency_name), 0, 1, false, true, 'C', true);

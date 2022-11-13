@@ -103,7 +103,7 @@
          </div>
          <div class="col-md-9 text-right _buttons perusahaan_buttons">
             <?php if(has_permission('perusahaan','','edit')){ ?>
-            <a href="<?php echo admin_url('perusahaan/perusahaan/'.$perusahaan->id); ?>" data-placement="left" data-toggle="tooltip" title="<?php echo _l('perusahaan_edit'); ?>" class="btn btn-default btn-with-tooltip" data-placement="bottom"><i class="fa fa-pencil-square-o"></i></a>
+            <a href="<?php echo admin_url('perusahaan/edit_perusahaan/'.$perusahaan->id); ?>" data-placement="left" data-toggle="tooltip" title="<?php echo _l('perusahaan_edit'); ?>" class="btn btn-default btn-with-tooltip" data-placement="bottom"><i class="fa fa-pencil-square-o"></i></a>
             <?php } ?>
             <div class="btn-group">
                <a href="#" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><i class="fa fa-file-pdf-o"></i><?php if(is_mobile()){echo ' PDF';} ?> <span class="caret"></span></a>
@@ -294,7 +294,7 @@
                               ?>
                         </div>
                      </div>
-                     <div class="col-md-5 col-md-offset-7">
+                     <div class="col-md-8 col-md-offset-4">
                         <table class="table text-right">
                            <tbody>
                               <tr id="subtotal">

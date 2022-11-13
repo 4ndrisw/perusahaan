@@ -121,10 +121,11 @@ foreach ($rResult as $aRow) {
 
     $row[] = '<a href="' . admin_url('perusahaan/list_perusahaan/' . $aRow[db_prefix() . 'perusahaan.id']) . '" onclick="init_perusahaan(' . $aRow[db_prefix() . 'perusahaan.id'] . '); return false;">' . $aRow['subject'] . '</a>';
 
+    $toOutput = '';
     if ($aRow['rel_type'] == 'lead') {
         $toOutput = '<a href="#" onclick="init_lead(' . $aRow['rel_id'] . ');return false;" target="_blank" data-toggle="tooltip" data-title="' . _l('lead') . '">' . $aRow['perusahaan_to'] . '</a>';
     } elseif ($aRow['rel_type'] == 'customer') {
-        $toOutput = '<a href="' . admin_url('clients/client/' . $aRow['rel_id']) . '" target="_blank" data-toggle="tooltip" data-title="' . _l('client') . '">' . $aRow['perusahaan_to'] . '</a>';
+        $toOutput = '<a href="' . admin_url('perusahaan/profil/' . $aRow['rel_id']) . '" target="_blank" data-toggle="tooltip" data-title="' . _l('client') . '">' . $aRow['perusahaan_to'] . '</a>';
     }
 
     $row[] = $toOutput;

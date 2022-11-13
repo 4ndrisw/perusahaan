@@ -1,5 +1,6 @@
 <?php
 
+use modules\perusahaan\services\PerusahaanProfileBadges;
 defined('BASEPATH') or exit('No direct script access allowed');
 
 /**
@@ -8,10 +9,11 @@ defined('BASEPATH') or exit('No direct script access allowed');
  */
 function perusahaan_head_component()
 {
-        echo '<link rel="stylesheet" type="text/css" id="perusahaan-css" href="'. base_url('modules/perusahaan/assets/css/perusahaan.css').'">';
+    echo '<link rel="stylesheet" type="text/css" id="perusahaan-css" href="' . base_url('modules/perusahaan/assets/css/perusahaan.css') . '">';
     $CI = &get_instance();
     if (($CI->uri->segment(1) == 'admin' && $CI->uri->segment(2) == 'perusahaan') ||
-        $CI->uri->segment(1) == 'perusahaan'){
+        $CI->uri->segment(1) == 'perusahaan'
+    ) {
     }
 }
 
@@ -22,11 +24,12 @@ function perusahaan_head_component()
  */
 function perusahaan_footer_js_component()
 {
-        echo '<script src="' . base_url('modules/perusahaan/assets/js/perusahaan.js') . '"></script>';
+    echo '<script src="' . base_url('modules/perusahaan/assets/js/perusahaan.js') . '"></script>';
     $CI = &get_instance();
     if (($CI->uri->segment(1) == 'admin' && $CI->uri->segment(2) == 'perusahaan') ||
         ($CI->uri->segment(1) == 'admin' && $CI->uri->segment(2) == 'list_perusahaan') ||
-        $CI->uri->segment(1) == 'perusahaan'){
+        $CI->uri->segment(1) == 'perusahaan'
+    ) {
     }
 }
 
@@ -422,10 +425,10 @@ if (!function_exists('format_perusahaan_info')) {
         }
 
         $format = _info_format_replace('company_name', $perusahaanTo, $format);
-        $format = _info_format_replace('address', $perusahaan->address .' '. $perusahaan->city, $format);
+        $format = _info_format_replace('address', $perusahaan->address . ' ' . $perusahaan->city, $format);
 
         $format = _info_format_replace('city', NULL, $format);
-        $format = _info_format_replace('state', $perusahaan->state .' '. $perusahaan->zip, $format);
+        $format = _info_format_replace('state', $perusahaan->state . ' ' . $perusahaan->zip, $format);
 
         $format = _info_format_replace('country_code', $countryCode, $format);
         $format = _info_format_replace('country_name', $countryName, $format);
@@ -434,7 +437,7 @@ if (!function_exists('format_perusahaan_info')) {
         $format = _info_format_replace('phone', $phone, $format);
         $format = _info_format_replace('email', $email, $format);
         $format = _info_format_replace('vat_number_with_label', NULL, $format);
-        
+
         $whereCF = [];
         if (is_custom_fields_for_customers_portal()) {
             $whereCF['show_on_client_portal'] = 1;
@@ -545,4 +548,44 @@ function perusahaan_status_color_pdf($status_id)
     }
 
     return hooks()->apply_filters('perusahaan_status_pdf_color', $statusColor, $status_id);
+}
+
+/**
+ * Filter only visible tabs selected from the profile and add badge
+ * @param  array $tabs available tabs
+ * @param  int $id perusahaan
+ * @return array
+ */
+function filter_perusahaan_visible_tabs($tabs, $id = '')
+{
+    $newTabs = [];
+    $customerProfileBadges = null;
+
+    $visible = get_option('visible_customer_profile_tabs');
+    if ($visible != 'all') {
+        $visible = unserialize($visible);
+    }
+
+    if ($id !== '') {
+        $customerProfileBadges = new PerusahaanProfileBadges($id);
+    }
+
+    $appliedSettings = is_array($visible);
+    foreach ($tabs as $key => $tab) {
+
+        // Check visibility from settings too
+        if ($key != 'profile' && $key != 'contacts' && $appliedSettings) {
+            if (array_key_exists($key, $visible) && $visible[$key] == false) {
+                continue;
+            }
+        }
+
+        if (!is_null($customerProfileBadges)) {
+            $tab['badge'] = $customerProfileBadges->getBadge($tab['slug']);
+        }
+
+        $newTabs[$key] = $tab;
+    }
+
+    return hooks()->apply_filters('perusahaan_filtered_visible_tabs', $newTabs);
 }

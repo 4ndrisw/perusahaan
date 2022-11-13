@@ -27,6 +27,8 @@
       <hr />
       <?php echo render_yes_no_option('allow_staff_view_perusahaan_assigned','allow_staff_view_perusahaan_assigned'); ?>
       <hr />
+      <?php echo render_yes_no_option('perusahaan_total_to_words_enabled','perusahaan_total_to_words_enabled'); ?>
+      <hr />
       <?php render_yes_no_option('view_perusahaan_only_logged_in','require_client_logged_in_to_view_perusahaan'); ?>
       <hr />
       <?php render_yes_no_option('show_assigned_on_perusahaan','show_assigned_on_perusahaan'); ?>

@@ -115,18 +115,18 @@ foreach ($rResult as $aRow) {
 
     $numberOutput .= '<a href="' . site_url('perusahaan/show/' . $aRow[db_prefix() . 'perusahaan.id'] . '/' . $aRow['hash']) . '" target="_blank">' . _l('view') . '</a>';
     if (has_permission('perusahaan', '', 'edit')) {
-        $numberOutput .= ' | <a href="' . admin_url('perusahaan/perusahaan/' . $aRow[db_prefix() . 'perusahaan.id']) . '">' . _l('edit') . '</a>';
+        $numberOutput .= ' | <a href="' . admin_url('perusahaan/edit_perusahaan/' . $aRow[db_prefix() . 'perusahaan.id']) . '">' . _l('edit') . '</a>';
     }
     $numberOutput .= '</div>';
 
     $row[] = $numberOutput;
 
     $row[] = '<a href="' . admin_url('perusahaan/list_perusahaan/' . $aRow[db_prefix() . 'perusahaan.id'] .'#/'. $aRow[db_prefix() . 'perusahaan.id']) . '" onclick="init_perusahaan(' . $aRow[db_prefix() . 'perusahaan.id'] . '); return false;">' . $aRow['subject'] . ' bb</a>';
-
+    $toOutput = '';
     if ($aRow['rel_type'] == 'lead') {
         $toOutput = '<a href="#" onclick="init_lead(' . $aRow['rel_id'] . ');return false;" target="_blank" data-toggle="tooltip" data-title="' . _l('lead') . '">' . $aRow['perusahaan_to'] . '</a>';
     } elseif ($aRow['rel_type'] == 'customer') {
-        $toOutput = '<a href="' . admin_url('clients/client/' . $aRow['rel_id']) . '" target="_blank" data-toggle="tooltip" data-title="' . _l('client') . '">' . $aRow['perusahaan_to'] . '</a>';
+        $toOutput = '<a href="' . admin_url('perusahaan/profil/' . $aRow['rel_id']) . '" target="_blank" data-toggle="tooltip" data-title="' . _l('client') . '">' . $aRow['perusahaan_to'] . '</a>';
     }
 
     $row[] = $toOutput;

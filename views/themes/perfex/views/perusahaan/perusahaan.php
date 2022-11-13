@@ -23,7 +23,7 @@
         </tr>
       </thead>
       <tbody>
-        <?php foreach($daftar__perusahaan as $perusahaan){ ?>
+        <?php foreach($daftar_perusahaan as $perusahaan){ ?>
           <tr>
             <td>
               <a href="<?php echo site_url('perusahaan/'.$perusahaan['id'].'/'.$perusahaan['hash']); ?>" class="td-perusahaan-url">

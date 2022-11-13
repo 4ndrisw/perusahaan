@@ -21,8 +21,8 @@ hooks()->add_action('admin_init', 'perusahaan_permissions');
 hooks()->add_action('admin_init', 'perusahaan_settings_tab');
 hooks()->add_action('clients_init', 'perusahaan_clients_area_menu_items');
 
-hooks()->add_action('app_admin_head', 'perusahaan_head_component');
-hooks()->add_action('app_admin_footer', 'perusahaan_footer_js_component');
+//hooks()->add_action('app_admin_head', 'perusahaan_head_component');
+//hooks()->add_action('app_admin_footer', 'perusahaan_footer_js_component');
 
 hooks()->add_action('staff_member_deleted', 'perusahaan_staff_member_deleted');
 
@@ -119,6 +119,9 @@ function perusahaan_permissions()
 
     $capabilities['capabilities'] = [
             'view'   => _l('permission_view') . '(' . _l('permission_global') . ')',
+            'view_by_instansi'   => _l('view_by_instansi'),
+            'view_by_unit'   => _l('view_by_unit'),
+            'view_by_pjk3'   => _l('view_by_pjk3'),
             'create' => _l('permission_create'),
             'edit'   => _l('permission_edit'),
             'delete' => _l('permission_delete'),

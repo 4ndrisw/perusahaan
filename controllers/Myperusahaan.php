@@ -10,11 +10,11 @@ class Myperusahaan extends ClientsController
         $this->load->model('perusahaan_model');
         $this->load->model('currencies_model');
         //include_once(module_libs_path(PERUSAHAAN_MODULE_NAME) . 'mails/Perusahaan_mail_template.php');
-        //$this->load->library('module_name/library_name'); 
-        //$this->load->library('perusahaan_mail_template'); 
+        //$this->load->library('module_name/library_name');
+        //$this->load->library('perusahaan_mail_template');
         //include_once(module_libs_path(PERUSAHAAN_MODULE_NAME) . 'mails/Perusahaan_send_to_customer.php');
-        //$this->load->library('module_name/library_name'); 
-        //$this->load->library('perusahaan_send_to_customer'); 
+        //$this->load->library('module_name/library_name');
+        //$this->load->library('perusahaan_send_to_customer');
 
 
     }
@@ -26,7 +26,7 @@ class Myperusahaan extends ClientsController
 
         if ($perusahaan->rel_type == 'customer' && !is_client_logged_in()) {
             load_client_language($perusahaan->rel_id);
-        } else if($perusahaan->rel_type == 'lead') {
+        } else if ($perusahaan->rel_type == 'lead') {
             load_lead_language($perusahaan->rel_id);
         }
 
@@ -51,7 +51,7 @@ class Myperusahaan extends ClientsController
                         process_digital_signature_image($this->input->post('signature', false), PROPOSAL_ATTACHMENTS_FOLDER . $id);
 
                         $this->db->where('id', $id);
-                        $this->db->update(db_prefix().'perusahaan', get_acceptance_info_array());
+                        $this->db->update(db_prefix() . 'perusahaan', get_acceptance_info_array());
                         redirect($this->uri->uri_string(), 'refresh');
                     }
 
@@ -72,7 +72,7 @@ class Myperusahaan extends ClientsController
         }
         $this->load->library('app_number_to_word', [
             'clientid' => $number_word_lang_rel_id,
-        ],'numberword');
+        ], 'numberword');
 
         $this->disableNavigation();
         $this->disableSubMenu();
@@ -87,21 +87,21 @@ class Myperusahaan extends ClientsController
             $data['bodyclass'] .= ' identity-confirmation';
         }
 
-        $this->app_scripts->theme('sticky-js','assets/plugins/sticky/sticky.js');
+        $this->app_scripts->theme('sticky-js', 'assets/plugins/sticky/sticky.js');
 
         $data['comments'] = $this->perusahaan_model->get_comments($id);
         add_views_tracking('perusahaan', $id);
         hooks()->do_action('perusahaan_html_viewed', $id);
         hooks()->add_action('app_admin_head', 'perusahaan_head_component');
-        
-        $this->app_css->remove('reset-css','customers-area-default');
+
+        $this->app_css->remove('reset-css', 'customers-area-default');
 
         $data                      = hooks()->apply_filters('perusahaan_customers_area_view_data', $data);
         no_index_customers_area();
         $this->data($data);
 
-        $this->view('themes/'. active_clients_theme() .'/views/perusahaan/perusahaan_html');
-        
+        $this->view('themes/' . active_clients_theme() . '/views/perusahaan/perusahaan_html');
+
         $this->layout();
     }
 

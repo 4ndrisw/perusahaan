@@ -7,8 +7,8 @@ foreach ($statuses as $status) {
     if($this->input->get('refresh')) {
         $kanBan->refresh($this->input->get('refresh')[$status] ?? null);
     }
-  $daftar__perusahaan = $kanBan->get();
-  $total_perusahaan = count($daftar__perusahaan);
+  $daftar_perusahaan = $kanBan->get();
+  $total_perusahaan = count($daftar_perusahaan);
   $total_pages = $kanBan->totalPages();
   ?>
  <ul class="kan-ban-col" data-col-status-id="<?php echo $status; ?>" data-total-pages="<?php echo $total_pages; ?>" data-total="<?php echo $total_perusahaan; ?>">
@@ -22,7 +22,7 @@ foreach ($statuses as $status) {
       <div class="kan-ban-content">
         <ul class="sortable<?php if(has_permission('perusahaan','','edit')){echo ' status pipeline-status'; } ?>" data-status-id="<?php echo $status; ?>">
           <?php
-          foreach ($daftar__perusahaan as $perusahaan) {
+          foreach ($daftar_perusahaan as $perusahaan) {
               $this->load->view('admin/perusahaan/pipeline/_kanban_card',array('perusahaan'=>$perusahaan,'status'=>$status));
           }
           ?>

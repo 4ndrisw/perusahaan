@@ -182,9 +182,9 @@
                </table>
             </div>
             <?php
-               if(get_option('total_to_words_enabled') == 1){ ?>
+               if(get_option('perusahaan_total_to_words_enabled') == 1){ ?>
             <div class="col-md-12 text-center perusahaan-html-total-to-words">
-               <p class="bold"><?php echo  _l('num_word').': '.$this->numberword->convert($perusahaan->total,$perusahaan->currency_name); ?></p>
+               <p class="bold"><?php echo  _l('num_word').' : '.$this->numberword->convert($perusahaan->total,$perusahaan->currency_name); ?></p>
             </div>
             <?php } ?>
             <?php if(count($perusahaan->attachments) > 0 && $perusahaan->visible_attachments_to_customer_found == true){ ?>

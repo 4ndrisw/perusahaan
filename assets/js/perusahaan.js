@@ -10,6 +10,15 @@ if ($("body").hasClass('perusahaan-pipeline')) {
 }
 */
 
+// Ajax unit search but only for specific instansi
+function init_ajax_unit_search_by_instansi_id(selector) {
+    selector = typeof (selector) == 'undefined' ? '#unit_id.ajax-search' : selector;
+    init_ajax_search('unit', selector, {
+        instansi_id: function () {
+            return $('#instansi_id').val();
+        }
+    });
+}
 
 function add_perusahaan_comment() {
     var comment = $('#comment').val();
