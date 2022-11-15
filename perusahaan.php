@@ -15,9 +15,6 @@ define('PERUSAHAAN_ATTACHMENTS_FOLDER', FCPATH . 'uploads/perusahaan/');
 //hooks()->add_filter('before_perusahaan_updated', '_format_data_perusahaan_feature');
 //hooks()->add_filter('before_perusahaan_added', '_format_data_perusahaan_feature');
 
-//hooks()->add_action('after_custom_profile_tab_content', 'perusahaan_content_tab_perusahaan',10,1);
-//hooks()->add_action('after_customer_admins_tab', 'perusahaan_tab_perusahaan',10,1);
-
 hooks()->add_action('after_cron_run', 'perusahaan_notification');
 hooks()->add_action('admin_init', 'perusahaan_module_init_menu_items');
 hooks()->add_action('admin_init', 'perusahaan_permissions');
