@@ -13,6 +13,11 @@
                   <?php echo _l('perusahaan'); ?>
                   </a>
                </li>
+               <li role="presentation">
+                  <a href="#tab_activity" aria-controls="tab_activity" role="tab" data-toggle="tab">
+                  <?php echo _l('perusahaan_view_activity_tooltip'); ?>
+                  </a>
+               </li>
                <?php if(isset($perusahaan)){ ?>
                <li role="presentation">
                   <a href="#tab_comments" onclick="get_perusahaan_comments(); return false;" aria-controls="tab_comments" role="tab" data-toggle="tab">
@@ -103,10 +108,10 @@
          </div>
          <div class="col-md-9 text-right _buttons perusahaan_buttons">
             <?php if(has_permission('perusahaan','','edit')){ ?>
-            <a href="<?php echo admin_url('perusahaan/edit_perusahaan/'.$perusahaan->id); ?>" data-placement="left" data-toggle="tooltip" title="<?php echo _l('perusahaan_edit'); ?>" class="btn btn-default btn-with-tooltip" data-placement="bottom"><i class="fa fa-pencil-square-o"></i></a>
+            <a href="<?php echo admin_url('perusahaan/edit_perusahaan/'.$perusahaan->id); ?>" data-placement="left" data-toggle="tooltip" title="<?php echo _l('perusahaan_edit'); ?>" class="btn btn-default btn-with-tooltip" data-placement="bottom"><i class="fa-regular fa-pen-to-square"></i></a>
             <?php } ?>
             <div class="btn-group">
-               <a href="#" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><i class="fa fa-file-pdf-o"></i><?php if(is_mobile()){echo ' PDF';} ?> <span class="caret"></span></a>
+               <a href="#" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><i class="fa-regular fa-file-pdf"></i><?php if(is_mobile()){echo ' PDF';} ?> <span class="caret"></span></a>
                <ul class="dropdown-menu dropdown-menu-right">
                   <li class="hidden-xs"><a href="<?php echo site_url('perusahaan/pdf/'.$perusahaan->id.'?output_type=I'); ?>"><?php echo _l('view_pdf'); ?></a></li>
                   <li class="hidden-xs"><a href="<?php echo site_url('perusahaan/pdf/'.$perusahaan->id.'?output_type=I'); ?>" target="_blank"><?php echo _l('view_pdf_in_new_window'); ?></a></li>
@@ -141,13 +146,13 @@
                      <a href="<?php echo admin_url() . 'perusahaan/copy/'.$perusahaan->id; ?>"><?php echo _l('perusahaan_copy'); ?></a>
                   </li>
                   <?php } ?>
-                  <?php if($perusahaan->id == NULL && $perusahaan->invoice_id == NULL){ ?>
+                  <?php if($perusahaan->status != '6'){ ?>
                   <?php foreach($perusahaan_statuses as $status){
                      if(has_permission('perusahaan','','edit')){
                       if($perusahaan->status != $status){ ?>
-                  <li>
-                     <a href="<?php echo admin_url() . 'perusahaan/mark_action_status/'.$status.'/'.$perusahaan->id; ?>"><?php echo _l('perusahaan_mark_as',format_perusahaan_status($status,'',false)); ?></a>
-                  </li>
+                           <li>
+                              <a href="<?php echo admin_url() . 'perusahaan/mark_action_status/'.$status.'/'.$perusahaan->id; ?>"><?php echo _l('perusahaan_mark_as',format_perusahaan_status($status,'',false)); ?></a>
+                           </li>
                   <?php
                      } } } ?>
                   <?php } ?>
@@ -168,7 +173,7 @@
             <?php if($perusahaan->id == NULL && $perusahaan->invoice_id == NULL){ ?>
             <?php if(has_permission('perusahaan','','create') || has_permission('invoices','','create')){ ?>
             <div class="btn-group">
-               <button type="button" class="btn btn-success dropdown-toggle<?php if($perusahaan->rel_type == 'customer' && total_rows(db_prefix().'clients',array('active'=>0,'userid'=>$perusahaan->rel_id)) > 0){echo ' disabled';} ?>" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+               <button type="button" class="btn btn-success dropdown-toggle<?php if($perusahaan->rel_type == 'customer' && total_rows(db_prefix().'clients',array('active'=>0,'userid'=>$perusahaan->clientid)) > 0){echo ' disabled';} ?>" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                <?php echo _l('perusahaan_convert'); ?> <span class="caret"></span>
                </button>
                <ul class="dropdown-menu dropdown-menu-right">
@@ -177,7 +182,7 @@
                      $not_related = false;
 
                      if($perusahaan->rel_type == 'lead'){
-                      if(total_rows(db_prefix().'clients',array('leadid'=>$perusahaan->rel_id)) == 0){
+                      if(total_rows(db_prefix().'clients',array('leadid'=>$perusahaan->clientid)) == 0){
                        $disable_convert = true;
                        $help_text = 'perusahaan_convert_to_lead_disabled_help';
                      }
@@ -197,7 +202,7 @@
             <?php } ?>
             <?php } else {
                if($perusahaan->id != NULL){
-                echo '<a href="'.admin_url('perusahaan/list_perusahaan/'.$perusahaan->id).'" class="btn btn-info">'.format_perusahaan_number($perusahaan->id).'</a>';
+                echo '<a href="'.admin_url('perusahaan/list_perusahaan/'.$perusahaan->id . '#'.$perusahaan->id).'" class="btn btn-info">'.format_perusahaan_number($perusahaan->id).'</a>';
                } else {
                 echo '<a href="'.admin_url('invoices/list_invoices/'.$perusahaan->invoice_id).'" class="btn btn-info">'.format_invoice_number($perusahaan->invoice_id).'</a>';
                }
@@ -211,7 +216,7 @@
             <div class="tab-content">
                <div role="tabpanel" class="tab-pane active" id="tab_perusahaan">
                   <div class="row mtop10">
-                     <?php if($perusahaan->status == 3 && !empty($perusahaan->acceptance_firstname) && !empty($perusahaan->acceptance_lastname) && !empty($perusahaan->acceptance_email)){ ?>
+                     <?php if($perusahaan->status == 6 && !empty($perusahaan->acceptance_firstname) && !empty($perusahaan->acceptance_lastname) && !empty($perusahaan->acceptance_email)){ ?>
                      <div class="col-md-12">
                         <div class="alert alert-info">
                            <?php echo _l('accepted_identity_info',array(
@@ -231,13 +236,13 @@
                                echo '<i class="fa fa-tag" aria-hidden="true" data-toggle="tooltip" data-title="'.html_escape(implode(', ',$tags)).'"></i>';
                               }
                               ?>
-                           <a href="<?php echo admin_url('perusahaan/perusahaan/'.$perusahaan->id); ?>">
+                           <a href="<?php echo admin_url('perusahaan/list_perusahaan/'.$perusahaan->id . '#'.$perusahaan->id); ?>">
                            <span id="perusahaan-number">
                            <?php echo format_perusahaan_number($perusahaan->id); ?>
                            </span>
                            </a>
                         </h4>
-                        <h5 class="bold mbot15 font-medium"><a href="<?php echo admin_url('perusahaan/perusahaan/'.$perusahaan->id); ?>"><?php echo $perusahaan->subject; ?></a></h5>
+                        <h5 class="bold mbot15 font-medium"><a href="<?php echo admin_url('perusahaan/list_perusahaan/'.$perusahaan->id . '#'.$perusahaan->id); ?>"><?php echo $perusahaan->subject; ?></a></h5>
                         <address>
                            <?php echo format_organization_info(); ?>
                         </address>
@@ -254,7 +259,7 @@
                      if(count($perusahaan->attachments) > 0){ ?>
                   <p class="bold"><?php echo _l('perusahaan_files'); ?></p>
                   <?php foreach($perusahaan->attachments as $attachment){
-                     $attachment_url = site_url('download/file/sales_attachment/'.$attachment['attachment_key']);
+                     $attachment_url = site_url('download/file/perusahaan/'.$attachment['attachment_key']);
                      if(!empty($attachment['external'])){
                         $attachment_url = $attachment['external_link'];
                      }
@@ -286,62 +291,7 @@
                   <div class="clearfix"></div>
 
                   <div class="row">
-                     <div class="col-md-12">
-                        <div class="table-responsive">
-                              <?php
-                                 $items = get_items_table_data($perusahaan, 'perusahaan', 'html', true);
-                                 echo $items->table();
-                              ?>
-                        </div>
-                     </div>
-                     <div class="col-md-8 col-md-offset-4">
-                        <table class="table text-right">
-                           <tbody>
-                              <tr id="subtotal">
-                                 <td><span class="bold"><?php echo _l('perusahaan_subtotal'); ?></span>
-                                 </td>
-                                 <td class="subtotal">
-                                    <?php echo app_format_money($perusahaan->subtotal, $perusahaan->currency_name); ?>
-                                 </td>
-                              </tr>
-                              <?php if(is_sale_discount_applied($perusahaan)){ ?>
-                              <tr>
-                                 <td>
-                                    <span class="bold"><?php echo _l('perusahaan_discount'); ?>
-                                    <?php if(is_sale_discount($perusahaan,'percent')){ ?>
-                                    (<?php echo app_format_number($perusahaan->discount_percent,true); ?>%)
-                                    <?php } ?></span>
-                                 </td>
-                                 <td class="discount">
-                                    <?php echo '-' . app_format_money($perusahaan->discount_total, $perusahaan->currency_name); ?>
-                                 </td>
-                              </tr>
-                              <?php } ?>
-                              <?php
-                                 foreach($items->taxes() as $tax){
-                                     echo '<tr class="tax-area"><td class="bold">'.$tax['taxname'].' ('.app_format_number($tax['taxrate']).'%)</td><td>'.app_format_money($tax['total_tax'], $perusahaan->currency_name).'</td></tr>';
-                                 }
-                                 ?>
-                              <?php if((int)$perusahaan->adjustment != 0){ ?>
-                              <tr>
-                                 <td>
-                                    <span class="bold"><?php echo _l('perusahaan_adjustment'); ?></span>
-                                 </td>
-                                 <td class="adjustment">
-                                    <?php echo app_format_money($perusahaan->adjustment, $perusahaan->currency_name); ?>
-                                 </td>
-                              </tr>
-                              <?php } ?>
-                              <tr>
-                                 <td><span class="bold"><?php echo _l('perusahaan_total'); ?></span>
-                                 </td>
-                                 <td class="total">
-                                    <?php echo app_format_money($perusahaan->total, $perusahaan->currency_name); ?>
-                                 </td>
-                              </tr>
-                           </tbody>
-                        </table>
-                     </div>
+                     
                      <?php if(count($perusahaan->attachments) > 0){ ?>
                      <div class="clearfix"></div>
                      <hr />
@@ -349,7 +299,7 @@
                         <p class="bold text-muted"><?php echo _l('perusahaan_files'); ?></p>
                      </div>
                      <?php foreach($perusahaan->attachments as $attachment){
-                        $attachment_url = site_url('download/file/sales_attachment/'.$attachment['attachment_key']);
+                        $attachment_url = site_url('download/file/perusahaan/'.$attachment['attachment_key']);
                         if(!empty($attachment['external'])){
                           $attachment_url = $attachment['external_link'];
                         }
@@ -403,6 +353,70 @@
                         </div>
                         <?php } ?>
                </div>
+
+               <div role="tabpanel" class="tab-pane" id="tab_activity">
+                  <div class="row">
+                     <div class="col-md-12">
+                        <div class="activity-feed">
+                           <?php foreach($activity as $activity){
+                              $_custom_data = false;
+                              ?>
+                           <div class="feed-item" data-sale-activity-id="<?php echo $activity['id']; ?>">
+                              <div class="date">
+                                 <span class="text-has-action" data-toggle="tooltip" data-title="<?php echo _dt($activity['date']); ?>">
+                                 <?php echo time_ago($activity['date']); ?>
+                                 </span>
+                              </div>
+                              <div class="text">
+                                 <?php if(is_numeric($activity['staffid']) && $activity['staffid'] != 0){ ?>
+                                 <a href="<?php echo admin_url('profile/'.$activity["staffid"]); ?>">
+                                 <?php echo staff_profile_image($activity['staffid'],array('staff-profile-xs-image pull-left mright5'));
+                                    ?>
+                                 </a>
+                                 <?php } ?>
+                                 <?php
+                                    $additional_data = '';
+                                    if(!empty($activity['additional_data'])){
+                                     $additional_data = unserialize($activity['additional_data']);
+
+                                     $i = 0;
+                                     foreach($additional_data as $data){
+                                       if(strpos($data,'<original_status>') !== false){
+                                         $original_status = get_string_between($data, '<original_status>', '</original_status>');
+                                         $additional_data[$i] = format_perusahaan_status($original_status,'',false);
+                                       } else if(strpos($data,'<new_status>') !== false){
+                                         $new_status = get_string_between($data, '<new_status>', '</new_status>');
+                                         $additional_data[$i] = format_perusahaan_status($new_status,'',false);
+                                       } else if(strpos($data,'<status>') !== false){
+                                         $status = get_string_between($data, '<status>', '</status>');
+                                         $additional_data[$i] = format_perusahaan_status($status,'',false);
+                                       } else if(strpos($data,'<custom_data>') !== false){
+                                         $_custom_data = get_string_between($data, '<custom_data>', '</custom_data>');
+                                         unset($additional_data[$i]);
+                                       }
+                                       $i++;
+                                     }
+                                    }
+                                    $_formatted_activity = _l($activity['description'],$additional_data);
+                                    if($_custom_data !== false){
+                                    $_formatted_activity .= ' - ' .$_custom_data;
+                                    }
+                                    if(!empty($activity['full_name'])){
+                                    $_formatted_activity = $activity['full_name'] . ' - ' . $_formatted_activity;
+                                    }
+                                    echo $_formatted_activity;
+                                    if(is_admin()){
+                                    echo '<a href="#" class="pull-right text-danger" onclick="delete_sale_activity('.$activity['id'].'); return false;"><i class="fa fa-remove"></i></a>';
+                                    }
+                                    ?>
+                              </div>
+                           </div>
+                           <?php } ?>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+
                <div role="tabpanel" class="tab-pane" id="tab_comments">
                   <div class="row perusahaan-comments mtop15">
                      <div class="col-md-12">
@@ -474,7 +488,7 @@
    </div>
 </div>
 <div id="modal-wrapper"></div>
-<?php // $this->load->view('admin/perusahaan/send_perusahaan_to_email_template'); ?>
+<?php //$this->load->view('admin/perusahaan/send_perusahaan_to_email_template'); ?>
 <script>
    init_btn_with_tooltips();
    init_datepicker();

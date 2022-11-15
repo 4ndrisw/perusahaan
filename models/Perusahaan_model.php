@@ -39,6 +39,78 @@ class Perusahaan_model extends App_Model
         return $this->db->query('SELECT DISTINCT(YEAR(date)) as year FROM ' . db_prefix() . 'perusahaan')->result_array();
     }
 
+
+    /**
+     * Performs perusahaan totals status
+     * @param array $data
+     * @return array
+     */
+    public function get_perusahaan_total($data)
+    {
+        $statuses            = $this->get_statuses();
+        $has_permission_view = has_permission('perusahaan', '', 'view');
+        $this->load->model('currencies_model');
+        if (isset($data['currency'])) {
+            $currencyid = $data['currency'];
+        } elseif (isset($data['customer_id']) && $data['customer_id'] != '') {
+            $currencyid = $this->clients_model->get_customer_default_currency($data['customer_id']);
+            if ($currencyid == 0) {
+                $currencyid = $this->currencies_model->get_base_currency()->id;
+            }
+        } elseif (isset($data['project_id']) && $data['project_id'] != '') {
+            $this->load->model('projects_model');
+            $currencyid = $this->projects_model->get_currency($data['project_id'])->id;
+        } else {
+            $currencyid = $this->currencies_model->get_base_currency()->id;
+        }
+
+        $currency = get_currency($currencyid);
+        $where    = '';
+        if (isset($data['customer_id']) && $data['customer_id'] != '') {
+            $where = ' AND clientid=' . $data['customer_id'];
+        }
+
+        if (isset($data['project_id']) && $data['project_id'] != '') {
+            $where .= ' AND project_id=' . $data['project_id'];
+        }
+
+        if (!$has_permission_view) {
+            $where .= ' AND ' . get_perusahaan_where_sql_for_staff(get_staff_user_id());
+        }
+
+        $sql = 'SELECT';
+        foreach ($statuses as $equipment_status) {
+            $sql .= '(SELECT SUM(total) FROM ' . db_prefix() . 'perusahaan WHERE status=' . $equipment_status;
+            $sql .= ' AND currency =' . $this->db->escape_str($currencyid);
+            if (isset($data['years']) && count($data['years']) > 0) {
+                $sql .= ' AND YEAR(date) IN (' . implode(', ', array_map(function ($year) {
+                    return get_instance()->db->escape_str($year);
+                }, $data['years'])) . ')';
+            } else {
+                $sql .= ' AND YEAR(date) = ' . date('Y');
+            }
+            $sql .= $where;
+            $sql .= ') as "' . $equipment_status . '",';
+        }
+
+        $sql     = substr($sql, 0, -1);
+        $result  = $this->db->query($sql)->result_array();
+        $_result = [];
+        $i       = 1;
+        foreach ($result as $key => $val) {
+            foreach ($val as $status => $total) {
+                $_result[$i]['total']         = $total;
+                $_result[$i]['symbol']        = $currency->symbol;
+                $_result[$i]['currency_name'] = $currency->name;
+                $_result[$i]['status']        = $status;
+                $i++;
+            }
+        }
+        $_result['currencyid'] = $currencyid;
+
+        return $_result;
+    }
+
     /**
      * Inserting new perusahaan function
      * @param mixed $data $_POST data
@@ -62,22 +134,23 @@ class Perusahaan_model extends App_Model
             unset($data['perusahaan_request_id']);
         }
 
-        $data['address'] = trim($data['address']);
-        $data['address'] = nl2br($data['address']);
+        $data['lokasi'] = trim($data['lokasi']);
+        $data['lokasi'] = nl2br($data['lokasi']);
 
         $data['datecreated'] = date('Y-m-d H:i:s');
         $data['addedfrom']   = get_staff_user_id();
         $data['hash']        = app_generate_hash();
-
+        /*
         if (empty($data['rel_type'])) {
             unset($data['rel_type']);
-            unset($data['rel_id']);
+            unset($data['clientid']);
         } else {
-            if (empty($data['rel_id'])) {
+            if (empty($data['clientid'])) {
                 unset($data['rel_type']);
-                unset($data['rel_id']);
+                unset($data['clientid']);
             }
         }
+        */
 
         $items = [];
         if (isset($data['newitems'])) {
@@ -91,7 +164,6 @@ class Perusahaan_model extends App_Model
 
         $hook = hooks()->apply_filters('before_create_perusahaan', [
             'data'  => $data,
-            'items' => $items,
         ]);
 
         $data  = $hook['data'];
@@ -123,7 +195,7 @@ class Perusahaan_model extends App_Model
                     _maybe_insert_post_item_tax($itemid, $item, $insert_id, 'perusahaan');
                 }
             }
-
+            
             $perusahaan = $this->get($insert_id);
             if ($perusahaan->assigned != 0) {
                 if ($perusahaan->assigned != get_staff_user_id()) {
@@ -131,7 +203,7 @@ class Perusahaan_model extends App_Model
                         'description'     => 'not_perusahaan_assigned_to_you',
                         'touserid'        => $perusahaan->assigned,
                         'fromuserid'      => get_staff_user_id(),
-                        'link'            => 'perusahaan/list_perusahaan/' . $insert_id,
+                        'link'            => 'perusahaan/list_perusahaan/' . $insert_id .'#' . $insert_id,
                         'additional_data' => serialize([
                             $perusahaan->subject,
                         ]),
@@ -144,7 +216,7 @@ class Perusahaan_model extends App_Model
 
             if ($data['rel_type'] == 'lead') {
                 $this->load->model('leads_model');
-                $this->leads_model->log_lead_activity($data['rel_id'], 'not_lead_activity_created_perusahaan', false, serialize([
+                $this->leads_model->log_lead_activity($data['clientid'], 'not_lead_activity_created_perusahaan', false, serialize([
                     '<a href="' . admin_url('perusahaan/list_perusahaan/' . $insert_id) . '" target="_blank">' . $data['subject'] . '</a>',
                 ]));
             }
@@ -177,146 +249,64 @@ class Perusahaan_model extends App_Model
 
         $data['allow_comments'] = isset($data['allow_comments']) ? 1 : 0;
 
-        $current_perusahaan = $this->get($id);
+        $origin = $this->get($id);
 
         $save_and_send = isset($data['save_and_send']);
 
+        /*
         if (empty($data['rel_type'])) {
-            $data['rel_id']   = null;
+            $data['clientid']   = null;
             $data['rel_type'] = '';
         } else {
-            if (empty($data['rel_id'])) {
-                $data['rel_id']   = null;
+            if (empty($data['clientid'])) {
+                $data['clientid']   = null;
                 $data['rel_type'] = '';
             }
         }
+        */
 
-        if (isset($data['custom_fields'])) {
-            $custom_fields = $data['custom_fields'];
-            if (handle_custom_fields_post($id, $custom_fields)) {
-                $affectedRows++;
-            }
-            unset($data['custom_fields']);
-        }
-
-        $items = [];
-        if (isset($data['items'])) {
-            $items = $data['items'];
-            unset($data['items']);
-        }
-
-        $newitems = [];
-        if (isset($data['newitems'])) {
-            $newitems = $data['newitems'];
-            unset($data['newitems']);
-        }
-
-        if (isset($data['tags'])) {
-            if (handle_tags_save($data['tags'], $id, 'perusahaan')) {
-                $affectedRows++;
-            }
-        }
-
-        $data['address'] = trim($data['address']);
-        $data['address'] = nl2br($data['address']);
+        //$data['date'] = _d($data['date']);
+        //$data['open_till'] = _d($data['open_till']);
+        
+        $data['lokasi'] = trim($data['lokasi']);
+        $data['lokasi'] = nl2br($data['lokasi']);
 
         $hook = hooks()->apply_filters('before_perusahaan_updated', [
             'data'          => $data,
-            'items'         => $items,
-            'newitems'      => $newitems,
             'removed_items' => isset($data['removed_items']) ? $data['removed_items'] : [],
         ], $id);
 
-        $data                  = $hook['data'];
-        $data['removed_items'] = $hook['removed_items'];
-        $newitems              = $hook['newitems'];
-        $items                 = $hook['items'];
-
-        // Delete items checked to be removed from database
-        foreach ($data['removed_items'] as $remove_item_id) {
-            if (handle_removed_sales_item_post($remove_item_id, 'perusahaan')) {
-                $affectedRows++;
-            }
-        }
-
-        unset($data['removed_items']);
-        unset($data['tags']);
-        unset($data['item_select']);
         unset($data['description']);
         unset($data['long_description']);
-        unset($data['quantity']);
-        unset($data['unit']);
-        unset($data['rate']);
-        unset($data['taxname']);
-
-
-
 
         $this->db->where('id', $id);
         $this->db->update(db_prefix() . 'perusahaan', $data);
         if ($this->db->affected_rows() > 0) {
+
+            $perusahaan = $this->get($id);            
+            if ($origin->subject != $perusahaan->subject) {
+                $this->log_perusahaan_activity($origin->id, 'perusahaan_activity_subject_changed', false, serialize([
+                    $origin->subject,
+                    $perusahaan->subject,
+                ]));
+            }
+
             $affectedRows++;
-            $perusahaan_now = $this->get($id);
-            if ($current_perusahaan->assigned != $perusahaan_now->assigned) {
-                if ($perusahaan_now->assigned != get_staff_user_id()) {
+            if ($origin->assigned != $perusahaan->assigned) {
+                //if ($perusahaan->assigned != get_staff_user_id()) {
                     $notified = add_notification([
                         'description'     => 'not_perusahaan_assigned_to_you',
-                        'touserid'        => $perusahaan_now->assigned,
+                        'touserid'        => $perusahaan->assigned,
                         'fromuserid'      => get_staff_user_id(),
                         'link'            => 'perusahaan/list_perusahaan/' . $id,
                         'additional_data' => serialize([
-                            $perusahaan_now->subject,
+                            $perusahaan->subject,
                         ]),
                     ]);
                     if ($notified) {
-                        pusher_trigger_notification([$perusahaan_now->assigned]);
+                        pusher_trigger_notification([$perusahaan->assigned,get_staff_user_id()]);
                     }
-                }
-            }
-        }
-
-        foreach ($items as $key => $item) {
-            if (update_sales_item_post($item['itemid'], $item)) {
-                $affectedRows++;
-            }
-
-            if (isset($item['custom_fields'])) {
-                if (handle_custom_fields_post($item['itemid'], $item['custom_fields'])) {
-                    $affectedRows++;
-                }
-            }
-
-            if (!isset($item['taxname']) || (isset($item['taxname']) && count($item['taxname']) == 0)) {
-                if (delete_taxes_from_item($item['itemid'], 'perusahaan')) {
-                    $affectedRows++;
-                }
-            } else {
-                $item_taxes        = get_perusahaan_item_taxes($item['itemid']);
-                $_item_taxes_names = [];
-                foreach ($item_taxes as $_item_tax) {
-                    array_push($_item_taxes_names, $_item_tax['taxname']);
-                }
-                $i = 0;
-                foreach ($_item_taxes_names as $_item_tax) {
-                    if (!in_array($_item_tax, $item['taxname'])) {
-                        $this->db->where('id', $item_taxes[$i]['id'])
-                        ->delete(db_prefix() . 'item_tax');
-                        if ($this->db->affected_rows() > 0) {
-                            $affectedRows++;
-                        }
-                    }
-                    $i++;
-                }
-                if (_maybe_insert_post_item_tax($item['itemid'], $item, $id, 'perusahaan')) {
-                    $affectedRows++;
-                }
-            }
-        }
-
-        foreach ($newitems as $key => $item) {
-            if ($new_item_added = add_new_sales_item_post($item, $id, 'perusahaan')) {
-                _maybe_insert_post_item_tax($new_item_added, $item, $id, 'perusahaan');
-                $affectedRows++;
+                //}
             }
         }
 
@@ -360,7 +350,7 @@ class Perusahaan_model extends App_Model
             $perusahaan = $this->db->get()->row();
             if ($perusahaan) {
                 $perusahaan->attachments                           = $this->get_attachments($id);
-                $perusahaan->items                                 = get_items_by_type('perusahaan', $id);
+                //$perusahaan->items                                 = get_items_by_type('perusahaan', $id);
                 $perusahaan->visible_attachments_to_customer_found = false;
                 foreach ($perusahaan->attachments as $attachment) {
                     if ($attachment['visible_to_customer'] == 1) {
@@ -377,7 +367,7 @@ class Perusahaan_model extends App_Model
                 */
             }
 
-            $perusahaan->client = $this->clients_model->get($perusahaan->client_id);
+            $perusahaan->client = $this->clients_model->get($perusahaan->clientid);
 
             if (!$perusahaan->client) {
                 $perusahaan->client          = new stdClass();
@@ -386,6 +376,34 @@ class Perusahaan_model extends App_Model
             
             return $perusahaan;
         }
+
+        return $this->db->get()->result_array();
+    }
+
+
+    /**
+     * Get jenis_pesawat
+     * @param  mixed $id perusahaan id OPTIONAL
+     * @return mixed
+     */
+    public function get_jenis_pesawat($id = '', $where = [], $for_editor = false)
+    {
+        $this->db->where($where);
+
+        if (is_client_logged_in()) {
+            $this->db->where('status !=', 0);
+        }
+
+        $this->db->select(['id', 'description']);
+        $this->db->from(db_prefix() . 'jenis_pesawat');
+
+        if (is_numeric($id)) {
+            $this->db->where(db_prefix() . 'perusahaan.id', $id);
+            $jenis_pesawat = $this->db->get()->row();
+            $jenis_pesawat->category = $this->perusahaan_model->get_category($jenis_pesawat->group_id);
+            return $jenis_pesawat;
+        }
+
 
         return $this->db->get()->result_array();
     }
@@ -444,20 +462,20 @@ class Perusahaan_model extends App_Model
         $deleted    = false;
         if ($attachment) {
             if (empty($attachment->external)) {
-                unlink(get_upload_path_by_type('perusahaan') . $attachment->rel_id . '/' . $attachment->file_name);
+                unlink(get_upload_path_by_type('perusahaan') . $attachment->clientid . '/' . $attachment->file_name);
             }
             $this->db->where('id', $attachment->id);
             $this->db->delete(db_prefix() . 'files');
             if ($this->db->affected_rows() > 0) {
                 $deleted = true;
-                log_activity('Perusahaan Attachment Deleted [ID: ' . $attachment->rel_id . ']');
+                log_activity('Perusahaan Attachment Deleted [ID: ' . $attachment->clientid . ']');
             }
-            if (is_dir(get_upload_path_by_type('perusahaan') . $attachment->rel_id)) {
+            if (is_dir(get_upload_path_by_type('perusahaan') . $attachment->clientid)) {
                 // Check if no attachments left, so we can delete the folder also
-                $other_attachments = list_files(get_upload_path_by_type('perusahaan') . $attachment->rel_id);
+                $other_attachments = list_files(get_upload_path_by_type('perusahaan') . $attachment->clientid);
                 if (count($other_attachments) == 0) {
                     // okey only index.html so we can delete the folder also
-                    delete_dir(get_upload_path_by_type('perusahaan') . $attachment->rel_id);
+                    delete_dir(get_upload_path_by_type('perusahaan') . $attachment->clientid);
                 }
             }
         }
@@ -640,56 +658,9 @@ class Perusahaan_model extends App_Model
             $insert_data['open_till'] = _d(date('Y-m-d', strtotime('+' . get_option('perusahaan_due_after') . ' DAY', strtotime(date('Y-m-d')))));
         }
 
-        $insert_data['newitems'] = [];
-        $custom_fields_items     = get_custom_fields('items');
-        $key                     = 1;
-        foreach ($perusahaan->items as $item) {
-            $insert_data['newitems'][$key]['description']      = $item['description'];
-            $insert_data['newitems'][$key]['long_description'] = clear_textarea_breaks($item['long_description']);
-            $insert_data['newitems'][$key]['qty']              = $item['qty'];
-            $insert_data['newitems'][$key]['unit']             = $item['unit'];
-            $insert_data['newitems'][$key]['taxname']          = [];
-            $taxes                                             = get_perusahaan_item_taxes($item['id']);
-            foreach ($taxes as $tax) {
-                // tax name is in format TAX1|10.00
-                array_push($insert_data['newitems'][$key]['taxname'], $tax['taxname']);
-            }
-            $insert_data['newitems'][$key]['rate']  = $item['rate'];
-            $insert_data['newitems'][$key]['order'] = $item['item_order'];
-            foreach ($custom_fields_items as $cf) {
-                $insert_data['newitems'][$key]['custom_fields']['items'][$cf['id']] = get_custom_field_value($item['id'], $cf['id'], 'items', false);
-
-                if (!defined('COPY_CUSTOM_FIELDS_LIKE_HANDLE_POST')) {
-                    define('COPY_CUSTOM_FIELDS_LIKE_HANDLE_POST', true);
-                }
-            }
-            $key++;
-        }
-
         $id = $this->add($insert_data);
-
-        if ($id) {
-            $custom_fields = get_custom_fields('perusahaan');
-            foreach ($custom_fields as $field) {
-                $value = get_custom_field_value($perusahaan->id, $field['id'], 'perusahaan', false);
-                if ($value == '') {
-                    continue;
-                }
-                $this->db->insert(db_prefix() . 'customfieldsvalues', [
-                    'relid'   => $id,
-                    'fieldid' => $field['id'],
-                    'fieldto' => 'perusahaan',
-                    'value'   => $value,
-                ]);
-            }
-
-            $tags = get_tags_in($perusahaan->id, 'perusahaan');
-            handle_tags_save($tags, $id, 'perusahaan');
-
             log_activity('Copied Perusahaan ' . format_perusahaan_number($perusahaan->id));
-
             return $id;
-        }
 
         return false;
     }
@@ -814,7 +785,7 @@ class Perusahaan_model extends App_Model
             $this->db->delete(db_prefix() . 'perusahaan_comments');
             // Get related tasks
             $this->db->where('rel_type', 'perusahaan');
-            $this->db->where('rel_id', $id);
+            $this->db->where('clientid', $id);
 
             $tasks = $this->db->get(db_prefix() . 'tasks')->result_array();
             foreach ($tasks as $task) {
@@ -826,24 +797,24 @@ class Perusahaan_model extends App_Model
                 $this->delete_attachment($attachment['id']);
             }
 
-            $this->db->where('rel_id', $id);
+            $this->db->where('clientid', $id);
             $this->db->where('rel_type', 'perusahaan');
             $this->db->delete(db_prefix() . 'notes');
 
-            $this->db->where('relid IN (SELECT id from ' . db_prefix() . 'itemable WHERE rel_type="perusahaan" AND rel_id="' . $this->db->escape_str($id) . '")');
+            $this->db->where('relid IN (SELECT id from ' . db_prefix() . 'itemable WHERE rel_type="perusahaan" AND clientid="' . $this->db->escape_str($id) . '")');
             $this->db->where('fieldto', 'items');
             $this->db->delete(db_prefix() . 'customfieldsvalues');
 
-            $this->db->where('rel_id', $id);
+            $this->db->where('clientid', $id);
             $this->db->where('rel_type', 'perusahaan');
             $this->db->delete(db_prefix() . 'itemable');
 
 
-            $this->db->where('rel_id', $id);
+            $this->db->where('clientid', $id);
             $this->db->where('rel_type', 'perusahaan');
             $this->db->delete(db_prefix() . 'item_tax');
 
-            $this->db->where('rel_id', $id);
+            $this->db->where('clientid', $id);
             $this->db->where('rel_type', 'perusahaan');
             $this->db->delete(db_prefix() . 'taggables');
 
@@ -853,11 +824,11 @@ class Perusahaan_model extends App_Model
             $this->db->delete(db_prefix() . 'customfieldsvalues');
 
             $this->db->where('rel_type', 'perusahaan');
-            $this->db->where('rel_id', $id);
+            $this->db->where('clientid', $id);
             $this->db->delete(db_prefix() . 'reminders');
 
             $this->db->where('rel_type', 'perusahaan');
-            $this->db->where('rel_id', $id);
+            $this->db->where('clientid', $id);
             $this->db->delete(db_prefix() . 'views_tracking');
 
             log_activity('Perusahaan Deleted [PerusahaanID:' . $id . ']');
@@ -870,66 +841,44 @@ class Perusahaan_model extends App_Model
 
     /**
      * Get relation perusahaan data. Ex lead or customer will return the necesary db fields
-     * @param  mixed $rel_id
+     * @param  mixed $clientid
      * @param  string $rel_type customer/lead
      * @return object
      */
-    public function get_relation_data_values($rel_id, $rel_type)
+    public function get_relation_data_values($clientid)
     {
         $data = new StdClass();
-        if ($rel_type == 'customer') {
-            $this->db->where('userid', $rel_id);
-            $_data = $this->db->get(db_prefix() . 'clients')->row();
 
-            $primary_contact_id = get_primary_contact_user_id($rel_id);
+        $this->db->where('userid', $clientid);
+        $_data = $this->db->get(db_prefix() . 'clients')->row();
 
-            if ($primary_contact_id) {
-                $contact     = $this->clients_model->get_contact($primary_contact_id);
-                $data->email = $contact->email;
-            }
+        $primary_contact_id = get_primary_contact_user_id($clientid);
 
-            $data->phone            = $_data->phonenumber;
-            $data->is_using_company = false;
-            if (isset($contact)) {
-                $data->to = $contact->firstname . ' ' . $contact->lastname;
-            } else {
-                if (!empty($_data->company)) {
-                    $data->to               = $_data->company;
-                    $data->is_using_company = true;
-                }
-            }
-            $data->company = $_data->company;
-            $data->address = clear_textarea_breaks($_data->address);
-            $data->zip     = $_data->zip;
-            $data->country = $_data->country;
-            $data->state   = $_data->state;
-            $data->city    = $_data->city;
+        if ($primary_contact_id) {
+            $contact     = $this->clients_model->get_contact($primary_contact_id);
+            $data->email = $contact->email;
+        }
 
-            $default_currency = $this->clients_model->get_customer_default_currency($rel_id);
-            if ($default_currency != 0) {
-                $data->currency = $default_currency;
-            }
-        } elseif ($rel_type = 'lead') {
-            $this->db->where('id', $rel_id);
-            $_data       = $this->db->get(db_prefix() . 'leads')->row();
-            $data->phone = $_data->phonenumber;
-
-            $data->is_using_company = false;
-
-            if (empty($_data->company)) {
-                $data->to = $_data->name;
-            } else {
+        $data->phone            = $_data->phonenumber;
+        $data->is_using_company = false;
+        if (isset($contact)) {
+            $data->to = $contact->firstname . ' ' . $contact->lastname;
+        } else {
+            if (!empty($_data->company)) {
                 $data->to               = $_data->company;
                 $data->is_using_company = true;
             }
+        }
+        $data->company = $_data->company;
+        $data->lokasi = clear_textarea_breaks($_data->lokasi);
+        $data->zip     = $_data->zip;
+        $data->country = $_data->country;
+        $data->state   = $_data->state;
+        $data->city    = $_data->city;
 
-            $data->company = $_data->company;
-            $data->address = $_data->address;
-            $data->email   = $_data->email;
-            $data->zip     = $_data->zip;
-            $data->country = $_data->country;
-            $data->state   = $_data->state;
-            $data->city    = $_data->city;
+        $default_currency = $this->clients_model->get_customer_default_currency($clientid);
+        if ($default_currency != 0) {
+            $data->currency = $default_currency;
         }
 
         return $data;
@@ -1006,5 +955,71 @@ class Perusahaan_model extends App_Model
         }
 
         return $kanBan->get();
+    }
+
+    /**
+     * Get the perusahaan for the client given
+     *
+     * @param  integer|null $staffId
+     * @param  integer $days
+     *
+     * @return array
+     */
+    public function get_client_perusahaan($client = null)
+    {
+        /*
+        if ($staffId && ! staff_can('view', 'perusahaan', $staffId)) {
+            $this->db->where('addedfrom', $staffId);
+        }
+        */
+
+        $this->db->select( db_prefix() . 'clients.userid,' . db_prefix() . 'perusahaan.hash,' . db_prefix() . 'perusahaan.date');
+        $this->db->join(db_prefix() . 'clients', db_prefix() . 'clients.userid = ' . db_prefix() . 'perusahaan.clientid', 'left');
+        
+        $this->db->where(db_prefix() . 'perusahaan.clientid =', $client->userid);
+
+        return $this->db->get(db_prefix() . 'perusahaan')->result_array();
+    }
+
+    /**
+     * All perusahaan activity
+     * @param mixed $id perusahaanid
+     * @return array
+     */
+    public function get_perusahaan_activity($id)
+    {
+        $this->db->where('rel_id', $id);
+        $this->db->where('rel_type', 'perusahaan');
+        $this->db->order_by('date', 'desc');
+
+        return $this->db->get(db_prefix() . 'perusahaan_activity')->result_array();
+    }
+
+    /**
+     * Log perusahaan activity to database
+     * @param mixed $id perusahaanid
+     * @param string $description activity description
+     */
+    public function log_perusahaan_activity($id, $description = '', $client = false, $additional_data = '')
+    {
+        $staffid   = get_staff_user_id();
+        $full_name = get_staff_full_name(get_staff_user_id());
+        if (DEFINED('CRON')) {
+            $staffid   = '[CRON]';
+            $full_name = '[CRON]';
+        } elseif ($client == true) {
+            $staffid   = null;
+            $full_name = '';
+        }
+
+        $this->db->insert(db_prefix() . 'perusahaan_activity', [
+            'description'     => $description,
+            'date'            => date('Y-m-d H:i:s'),
+            'rel_id'          => $id,
+            'rel_type'        => 'perusahaan',
+            'staffid'         => $staffid,
+            'full_name'       => $full_name,
+            'additional_data' => $additional_data,
+        ]);
     }
 }

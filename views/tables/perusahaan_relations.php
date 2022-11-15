@@ -10,7 +10,7 @@ $aColumns = [
     'total',
     'date',
     'open_till',
-    '(SELECT GROUP_CONCAT(name SEPARATOR ",") FROM ' . db_prefix() . 'taggables JOIN ' . db_prefix() . 'tags ON ' . db_prefix() . 'taggables.tag_id = ' . db_prefix() . 'tags.id WHERE rel_id = ' . db_prefix() . 'perusahaan.id and rel_type="perusahaan" ORDER by tag_order ASC) as tags',
+    '(SELECT GROUP_CONCAT(name SEPARATOR ",") FROM ' . db_prefix() . 'taggables JOIN ' . db_prefix() . 'tags ON ' . db_prefix() . 'taggables.tag_id = ' . db_prefix() . 'tags.id WHERE clientid = ' . db_prefix() . 'perusahaan.id and rel_type="perusahaan" ORDER by tag_order ASC) as tags',
     'datecreated',
     'status',
     ];
@@ -29,14 +29,14 @@ foreach ($custom_fields as $key => $field) {
     array_push($join, 'LEFT JOIN ' . db_prefix() . 'customfieldsvalues as ctable_' . $key . ' ON ' . db_prefix() . 'perusahaan.id = ctable_' . $key . '.relid AND ctable_' . $key . '.fieldto="' . $field['fieldto'] . '" AND ctable_' . $key . '.fieldid=' . $field['id']);
 }
 
-$where = 'AND rel_id = ' . $rel_id . ' AND rel_type = "' . $rel_type . '"';
+$where = 'AND clientid = ' . $clientid . ' AND rel_type = "' . $rel_type . '"';
 
 if ($rel_type == 'customer') {
-    $this->ci->db->where('userid', $rel_id);
+    $this->ci->db->where('userid', $clientid);
     $customer = $this->ci->db->get(db_prefix() . 'clients')->row();
     if ($customer) {
         if (!is_null($customer->leadid)) {
-            $where .= ' OR rel_type="lead" AND rel_id=' . $customer->leadid;
+            $where .= ' OR rel_type="lead" AND clientid=' . $customer->leadid;
         }
     }
 }

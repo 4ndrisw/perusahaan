@@ -52,9 +52,9 @@ class PerusahaanPipeline extends AbstractKanban
                 subject LIKE "%' . $q . '%" ESCAPE \'!\')');
         } else {
             $this->ci->db->where(db_prefix() . 'perusahaan.id IN
-                (SELECT rel_id FROM ' . db_prefix() . 'taggables WHERE tag_id IN
+                (SELECT clientid FROM ' . db_prefix() . 'taggables WHERE tag_id IN
                 (SELECT id FROM ' . db_prefix() . 'tags WHERE name="' . $this->ci->db->escape_str(strafter($q, '#')) . '")
-                AND ' . db_prefix() . 'taggables.rel_type=\'perusahaan\' GROUP BY rel_id HAVING COUNT(tag_id) = 1)
+                AND ' . db_prefix() . 'taggables.rel_type=\'perusahaan\' GROUP BY clientid HAVING COUNT(tag_id) = 1)
                 ');
         }
 
@@ -66,7 +66,7 @@ class PerusahaanPipeline extends AbstractKanban
         $has_permission_view = has_permission('perusahaan', '', 'view');
         $noPermissionQuery   = get_perusahaan_sql_where_staff(get_staff_user_id());
 
-        $this->ci->db->select('id,invoice_id,perusahaan_id,subject,rel_type,rel_id,total,date,open_till,currency,perusahaan_to,status');
+        $this->ci->db->select('id,invoice_id,perusahaan_id,subject,rel_type,clientid,total,date,open_till,currency,perusahaan_to,status');
         $this->ci->db->from('perusahaan');
         $this->ci->db->where('status', $this->status);
 

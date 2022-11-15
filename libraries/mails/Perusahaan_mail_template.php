@@ -38,7 +38,7 @@ class Perusahaan_mail_template
      * Relation ID, e.q. invoice id
      * @var mixed
      */
-    public $rel_id;
+    public $clientid;
 
     /**
      * Relation type, e.q invoice
@@ -488,19 +488,19 @@ class Perusahaan_mail_template
             }
         } elseif ($rel_type == 'lead') {
             $this->ci->db->select('default_language');
-            $this->ci->db->where('id', $this->get_rel_id());
+            $this->ci->db->where('id', $this->get_clientid());
             $lead = $this->ci->db->get(db_prefix() . 'leads')->row();
         } elseif ($rel_type == 'perusahaan') {
-            $this->ci->db->select('rel_type, rel_id');
-            $this->ci->db->where('id', $this->get_rel_id());
+            $this->ci->db->select('rel_type, clientid');
+            $this->ci->db->where('id', $this->get_clientid());
             $perusahaan = $this->ci->db->get(db_prefix() . 'perusahaan')->row();
             if ($perusahaan && $perusahaan->rel_type == 'lead') {
                 $this->ci->db->select('default_language')
-                ->where('id', $perusahaan->rel_id);
+                ->where('id', $perusahaan->clientid);
 
                 $lead = $this->ci->db->get(db_prefix() . 'leads')->row();
             } elseif ($perusahaan && $perusahaan->rel_type == 'customer') {
-                $customerDefault = get_client_default_language($perusahaan->rel_id);
+                $customerDefault = get_client_default_language($perusahaan->clientid);
                 if (!empty($customerDefault)) {
                     $language = $customerDefault;
                 }
@@ -587,11 +587,11 @@ class Perusahaan_mail_template
 
     /**
      * Set template relation id
-     * @param mixed $rel_id
+     * @param mixed $clientid
      */
-    public function set_rel_id($rel_id)
+    public function set_clientid($clientid)
     {
-        $this->rel_id = $rel_id;
+        $this->clientid = $clientid;
 
         return $this;
     }
@@ -600,9 +600,9 @@ class Perusahaan_mail_template
      * Get template relation id
      * @return mixed x
      */
-    public function get_rel_id()
+    public function get_clientid()
     {
-        return $this->rel_id;
+        return $this->clientid;
     }
 
     /**
@@ -668,6 +668,6 @@ class Perusahaan_mail_template
         $this->clear_attachments();
         $this->set_staff_id(null);
         $this->set_rel_type(null);
-        $this->set_rel_id(null);
+        $this->set_clientid(null);
     }
 }

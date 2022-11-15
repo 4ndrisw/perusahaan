@@ -19,15 +19,39 @@ class Myperusahaan extends ClientsController
 
     }
 
+    /* Get all perusahaan in case user go on index page */
+    public function list($id = '')
+    {
+        
+        if ($this->input->is_ajax_request()) {
+            $this->app->get_table_data(module_views_path('perusahaan', 'admin/tables/table'));
+        }
+        $contact_id = get_contact_user_id();
+        $user_id = get_user_id_by_contact_id($contact_id);
+        $client = $this->clients_model->get($user_id);
+        
+        $data['daftar_perusahaan'] = $this->perusahaan_model->get_client_perusahaan($client);
+        $data['client'] = $client;
+        $data['perusahaan_statuses'] = $this->perusahaan_model->get_statuses();
+        $data['perusahaanid']            = $id;
+        $data['title']                 = _l('perusahaan_tracking');
+        
+        $data['bodyclass'] = 'perusahaan';
+        $this->data($data);
+        $this->view('themes/'. active_clients_theme() .'/views/perusahaan/perusahaan');
+        $this->layout();
+
+    }
+
     public function show($id, $hash)
     {
         check_perusahaan_restrictions($id, $hash);
         $perusahaan = $this->perusahaan_model->get($id);
 
         if ($perusahaan->rel_type == 'customer' && !is_client_logged_in()) {
-            load_client_language($perusahaan->rel_id);
+            load_client_language($perusahaan->clientid);
         } else if ($perusahaan->rel_type == 'lead') {
-            load_lead_language($perusahaan->rel_id);
+            load_lead_language($perusahaan->clientid);
         }
 
         $identity_confirmation_enabled = get_option('perusahaan_accept_identity_confirmation');
@@ -66,12 +90,12 @@ class Myperusahaan extends ClientsController
             }
         }
 
-        $number_word_lang_rel_id = 'unknown';
+        $number_word_lang_clientid = 'unknown';
         if ($perusahaan->rel_type == 'customer') {
-            $number_word_lang_rel_id = $perusahaan->rel_id;
+            $number_word_lang_clientid = $perusahaan->clientid;
         }
         $this->load->library('app_number_to_word', [
-            'clientid' => $number_word_lang_rel_id,
+            'clientid' => $number_word_lang_clientid,
         ], 'numberword');
 
         $this->disableNavigation();

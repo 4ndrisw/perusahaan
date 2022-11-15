@@ -35,8 +35,7 @@ class Perusahaan extends AdminController
             access_denied('perusahaan');
         }
 
-        log_activity($perusahaan_id);
-
+        $data['perusahaan_statuses'] = $this->perusahaan_model->get_statuses();
         $isPipeline = $this->session->userdata('perusahaan_pipeline') == 'true';
 
         if ($isPipeline && !$this->input->get('status')) {
@@ -57,7 +56,6 @@ class Perusahaan extends AdminController
             if ($this->input->get('status') && $isPipeline) {
                 $this->pipeline(0, true);
             }
-
             $data['perusahaan_id']           = $perusahaan_id;
             $data['switch_pipeline']       = true;
             $data['title']                 = _l('perusahaan');
@@ -65,7 +63,6 @@ class Perusahaan extends AdminController
             //$data['perusahaan_sale_agents'] = $this->perusahaan_model->get_sale_agents();
             $data['years']                 = $this->perusahaan_model->get_perusahaan_years();
 
-            log_activity(json_encode($data));
             if ($perusahaan_id) {
                 $this->load->view('admin/perusahaan/manage_small_table', $data);
             } else {
@@ -74,321 +71,6 @@ class Perusahaan extends AdminController
         }
     }
 
-    public function profil($id)
-    {
-
-        if (!has_permission('customers', '', 'view')) {
-            if ($id != '' && !is_customer_admin($id)) {
-                access_denied('customers');
-            }
-        }
-
-        if ($this->input->post() && !$this->input->is_ajax_request()) {
-            if ($id == '') {
-                if (!has_permission('customers', '', 'create')) {
-                    access_denied('customers');
-                }
-
-                $data = $this->input->post();
-
-                $save_and_add_contact = false;
-                if (isset($data['save_and_add_contact'])) {
-                    unset($data['save_and_add_contact']);
-                    $save_and_add_contact = true;
-                }
-                $id = $this->clients_model->add($data);
-                if (!has_permission('customers', '', 'view')) {
-                    $assign['customer_admins']   = [];
-                    $assign['customer_admins'][] = get_staff_user_id();
-                    $this->clients_model->assign_admins($assign, $id);
-                }
-                if ($id) {
-                    set_alert('success', _l('added_successfully', _l('client')));
-                    if ($save_and_add_contact == false) {
-                        redirect(admin_url('perusahaan/profil/' . $id));
-                    } else {
-                        redirect(admin_url('perusahaan/profil/' . $id . '?group=contacts&new_contact=true'));
-                    }
-                }
-            } else {
-                if (!has_permission('customers', '', 'edit')) {
-                    if (!is_customer_admin($id)) {
-                        access_denied('customers');
-                    }
-                }
-                $success = $this->clients_model->update($this->input->post(), $id);
-                if ($success == true) {
-                    set_alert('success', _l('updated_successfully', _l('client')));
-                }
-                redirect(admin_url('perusahaan/profil/' . $id));
-            }
-        }
-
-        $group         = !$this->input->get('group') ? 'profile' : $this->input->get('group');
-        $data['group'] = $group;
-
-        if ($group != 'contacts' && $contact_id = $this->input->get('contactid')) {
-            redirect(admin_url('perusahaan/profil/' . $id . '?group=contacts&contactid=' . $contact_id));
-        }
-
-        // Customer groups
-        $data['groups'] = $this->clients_model->get_groups();
-
-        if ($id == '') {
-            $title = _l('add_new', _l('client_lowercase'));
-        } else {
-            $client                = $this->clients_model->get($id);
-            $data['customer_tabs'] = get_customer_profile_tabs($id);
-
-            if (!$client) {
-                show_404();
-            }
-
-            $data['contacts'] = $this->clients_model->get_contacts($id);
-            $data['tab']      = isset($data['customer_tabs'][$group]) ? $data['customer_tabs'][$group] : null;
-
-            if (!$data['tab']) {
-                show_404();
-            }
-
-            // Fetch data based on groups
-            if ($group == 'profile') {
-                $data['customer_groups'] = $this->clients_model->get_customer_groups($id);
-                $data['customer_admins'] = $this->clients_model->get_admins($id);
-            } elseif ($group == 'attachments') {
-                $data['attachments'] = get_all_customer_attachments($id);
-            } elseif ($group == 'vault') {
-                $data['vault_entries'] = hooks()->apply_filters('check_vault_entries_visibility', $this->clients_model->get_vault_entries($id));
-
-                if ($data['vault_entries'] === -1) {
-                    $data['vault_entries'] = [];
-                }
-            } elseif ($group == 'estimates') {
-                $this->load->model('estimates_model');
-                $data['estimate_statuses'] = $this->estimates_model->get_statuses();
-            } elseif ($group == 'invoices') {
-                $this->load->model('invoices_model');
-                $data['invoice_statuses'] = $this->invoices_model->get_statuses();
-            } elseif ($group == 'credit_notes') {
-                $this->load->model('credit_notes_model');
-                $data['credit_notes_statuses'] = $this->credit_notes_model->get_statuses();
-                $data['credits_available']     = $this->credit_notes_model->total_remaining_credits_by_customer($id);
-            } elseif ($group == 'payments') {
-                $this->load->model('payment_modes_model');
-                $data['payment_modes'] = $this->payment_modes_model->get();
-            } elseif ($group == 'notes') {
-                $data['user_notes'] = $this->misc_model->get_notes($id, 'customer');
-            } elseif ($group == 'projects') {
-                $this->load->model('projects_model');
-                $data['project_statuses'] = $this->projects_model->get_project_statuses();
-            } elseif ($group == 'statement') {
-                if (!has_permission('invoices', '', 'view') && !has_permission('payments', '', 'view')) {
-                    set_alert('danger', _l('access_denied'));
-                    redirect(admin_url('perusahaan/profil/' . $id));
-                }
-
-                $data = array_merge($data, prepare_mail_preview_data('customer_statement', $id));
-            } elseif ($group == 'map') {
-                if (get_option('google_api_key') != '' && !empty($client->latitude) && !empty($client->longitude)) {
-                    $this->app_scripts->add('map-js', base_url($this->app_scripts->core_file('assets/js', 'map.js')) . '?v=' . $this->app_css->core_version());
-
-                    $this->app_scripts->add('google-maps-api-js', [
-                        'path'       => 'https://maps.googleapis.com/maps/api/js?key=' . get_option('google_api_key') . '&callback=initMap',
-                        'attributes' => [
-                            'async',
-                            'defer',
-                            'latitude'       => "$client->latitude",
-                            'longitude'      => "$client->longitude",
-                            'mapMarkerTitle' => "$client->company",
-                        ],
-                        ]);
-                }
-            }
-
-            $data['staff'] = $this->staff_model->get('', ['active' => 1]);
-
-            $data['client'] = $client;
-            $title          = $client->company;
-
-            // Get all active staff members (used to add reminder)
-            $data['members'] = $data['staff'];
-
-            if (!empty($data['client']->company)) {
-                // Check if is realy empty client company so we can set this field to empty
-                // The query where fetch the client auto populate firstname and lastname if company is empty
-                if (is_empty_customer_company($data['client']->userid)) {
-                    $data['client']->company = '';
-                }
-            }
-        }
-
-        $this->load->model('currencies_model');
-        $data['currencies'] = $this->currencies_model->get();
-
-        if ($id != '') {
-            $customer_currency = $data['client']->default_currency;
-
-            foreach ($data['currencies'] as $currency) {
-                if ($customer_currency != 0) {
-                    if ($currency['id'] == $customer_currency) {
-                        $customer_currency = $currency;
-
-                        break;
-                    }
-                } else {
-                    if ($currency['isdefault'] == 1) {
-                        $customer_currency = $currency;
-
-                        break;
-                    }
-                }
-            }
-
-            if (is_array($customer_currency)) {
-                $customer_currency = (object) $customer_currency;
-            }
-
-            $data['customer_currency'] = $customer_currency;
-
-            $slug_zip_folder = (
-                $client->company != ''
-                ? $client->company
-                : get_contact_full_name(get_primary_contact_user_id($client->userid))
-            );
-
-            $data['zip_in_folder'] = slug_it($slug_zip_folder);
-        }
-
-        $data['bodyclass'] = 'customer-profile dynamic-create-groups';
-        $data['title']     = $title;
-
-        $this->load->view('admin/clients/client', $data);
-    }
-
-    /* View all settings */
-    public function profile($id)
-    {
-        if (!has_permission('settings', '', 'view')) {
-            access_denied('settings');
-        }
-
-        $tab = $this->input->get('group');
-
-        if ($this->input->post()) {
-            if (!has_permission('settings', '', 'edit')) {
-                access_denied('settings');
-            }
-            $logo_uploaded     = (handle_company_logo_upload() ? true : false);
-            $favicon_uploaded  = (handle_favicon_upload() ? true : false);
-            $signatureUploaded = (handle_company_signature_upload() ? true : false);
-
-            $post_data = $this->input->post();
-            $tmpData   = $this->input->post(null, false);
-
-            if (isset($post_data['settings']['email_header'])) {
-                $post_data['settings']['email_header'] = $tmpData['settings']['email_header'];
-            }
-
-            if (isset($post_data['settings']['email_footer'])) {
-                $post_data['settings']['email_footer'] = $tmpData['settings']['email_footer'];
-            }
-
-            if (isset($post_data['settings']['email_signature'])) {
-                $post_data['settings']['email_signature'] = $tmpData['settings']['email_signature'];
-            }
-
-            if (isset($post_data['settings']['smtp_password'])) {
-                $post_data['settings']['smtp_password'] = $tmpData['settings']['smtp_password'];
-            }
-
-            $success = $this->settings_model->update($post_data);
-
-            if ($success > 0) {
-                set_alert('success', _l('settings_updated'));
-            }
-
-            if ($logo_uploaded || $favicon_uploaded) {
-                set_debug_alert(_l('logo_favicon_changed_notice'));
-            }
-
-            // Do hard refresh on general for the logo
-            if ($tab == 'general') {
-                redirect(admin_url('perusahaan/profile?group=' . $tab), 'refresh');
-            } elseif ($signatureUploaded) {
-                redirect(admin_url('perusahaan/profile?group=pdf&tab=signature'));
-            } else {
-                $redUrl = admin_url('perusahaan/profile?group=' . $tab);
-                if ($this->input->get('active_tab')) {
-                    $redUrl .= '&tab=' . $this->input->get('active_tab');
-                }
-                redirect($redUrl);
-            }
-        }
-
-        $this->load->model('taxes_model');
-        $this->load->model('tickets_model');
-        $this->load->model('leads_model');
-        $this->load->model('currencies_model');
-        $this->load->model('staff_model');
-        $data['taxes']                                   = $this->taxes_model->get();
-        $data['ticket_priorities']                       = $this->tickets_model->get_priority();
-        $data['ticket_priorities']['callback_translate'] = 'ticket_priority_translate';
-        $data['roles']                                   = $this->roles_model->get();
-        $data['leads_sources']                           = $this->leads_model->get_source();
-        $data['leads_statuses']                          = $this->leads_model->get_status();
-        $data['title']                                   = _l('options');
-        $data['staff']                                   = $this->staff_model->get('', ['active' => 1]);
-
-        $data['admin_tabs'] = ['update', 'info'];
-
-        if (!$tab || (in_array($tab, $data['admin_tabs']) && !is_admin())) {
-            $tab = 'general';
-        }
-
-        $data['tabs'] = $this->app_tabs->get_settings_tabs();
-        if (!in_array($tab, $data['admin_tabs'])) {
-            $data['tab'] = $this->app_tabs->filter_tab($data['tabs'], $tab);
-        } else {
-            // Core tabs are not registered
-            $data['tab']['slug'] = $tab;
-            $data['tab']['view'] = 'admin/settings/includes/' . $tab;
-        }
-
-        if (!$data['tab']) {
-            show_404();
-        }
-
-        if ($data['tab']['slug'] == 'update') {
-            if (!extension_loaded('curl')) {
-                $data['update_errors'][] = 'CURL Extension not enabled';
-                $data['latest_version']  = 0;
-                $data['update_info']     = json_decode('');
-            } else {
-                $data['update_info'] = $this->app->get_update_info();
-                if (strpos($data['update_info'], 'Curl Error -') !== false) {
-                    $data['update_errors'][] = $data['update_info'];
-                    $data['latest_version']  = 0;
-                    $data['update_info']     = json_decode('');
-                } else {
-                    $data['update_info']    = json_decode($data['update_info']);
-                    $data['latest_version'] = $data['update_info']->latest_version;
-                    $data['update_errors']  = [];
-                }
-            }
-
-            if (!extension_loaded('zip')) {
-                $data['update_errors'][] = 'ZIP Extension not enabled';
-            }
-
-            $data['current_version'] = $this->current_db_version;
-        }
-
-        $data['contacts_permissions'] = get_contact_permissions();
-        $data['payment_gateways']     = $this->payment_modes_model->get_payment_gateways(true);
-
-        $this->load->view('admin/settings/all', $data);
-    }
-    
     public function table()
     {
         if (
@@ -413,10 +95,10 @@ class Perusahaan extends AdminController
         $this->app->get_table_data(module_views_path('perusahaan', 'tables/perusahaan_small_table'));
     }
 
-    public function perusahaan_relations($rel_id, $rel_type)
+    public function perusahaan_relations($clientid, $rel_type)
     {
         $this->app->get_table_data(module_views_path('perusahaan', 'tables/perusahaan_relations', [
-            'rel_id'   => $rel_id,
+            'clientid'   => $clientid,
             'rel_type' => $rel_type,
         ]));
     }
@@ -445,7 +127,7 @@ class Perusahaan extends AdminController
         if (has_permission('perusahaan', '', 'create') || has_permission('perusahaan', '', 'edit')) {
             $has_permission_view = has_permission('perusahaan', '', 'view');
 
-            $this->db->where('rel_id', $this->input->post('rel_id'));
+            $this->db->where('clientid', $this->input->post('clientid'));
             $this->db->where('rel_type', $this->input->post('rel_type'));
 
             if (!$has_permission_view) {
@@ -523,15 +205,15 @@ class Perusahaan extends AdminController
 
         $this->load->model('taxes_model');
         $data['taxes'] = $this->taxes_model->get();
-        $this->load->model('invoice_items_model');
+        $this->load->model('jenis_pesawat_model');
         $data['ajaxItems'] = false;
         if (total_rows(db_prefix() . 'items') <= ajax_on_total_items()) {
-            $data['items'] = $this->invoice_items_model->get_grouped();
+            $data['items'] = $this->jenis_pesawat_model->get_grouped();
         } else {
             $data['items']     = [];
             $data['ajaxItems'] = true;
         }
-        $data['items_groups'] = $this->invoice_items_model->get_groups();
+        $data['kelompok_alat'] = $this->jenis_pesawat_model->get_groups();
 
         $data['statuses']      = $this->perusahaan_model->get_statuses();
         $data['staff']         = $this->staff_model->get('', ['active' => 1]);
@@ -567,15 +249,16 @@ class Perusahaan extends AdminController
         $title = _l('add_new', _l('perusahaan_lowercase'));
         $this->load->model('taxes_model');
         $data['taxes'] = $this->taxes_model->get();
-        $this->load->model('invoice_items_model');
+        $this->load->model('jenis_pesawat_model');
+        $data['jenis_pesawat'] = $this->perusahaan_model->get_jenis_pesawat();
         $data['ajaxItems'] = false;
         if (total_rows(db_prefix() . 'items') <= ajax_on_total_items()) {
-            $data['items'] = $this->invoice_items_model->get_grouped();
+            $data['items'] = $this->jenis_pesawat_model->get_grouped();
         } else {
             $data['items']     = [];
             $data['ajaxItems'] = true;
         }
-        $data['items_groups'] = $this->invoice_items_model->get_groups();
+        $data['kelompok_alat'] = $this->jenis_pesawat_model->get_groups();
 
         $data['statuses']      = $this->perusahaan_model->get_statuses();
         $data['staff']         = $this->staff_model->get('', ['active' => 1]);
@@ -594,6 +277,7 @@ class Perusahaan extends AdminController
             if (!has_permission('perusahaan', '', 'edit')) {
                 access_denied('perusahaan');
             }
+
             $success = $this->perusahaan_model->update($perusahaan_data, $id);
             if ($success) {
                 set_alert('success', _l('updated_successfully', _l('perusahaan')));
@@ -614,17 +298,20 @@ class Perusahaan extends AdminController
         $data['perusahaan']    = $data['perusahaan'];
         $data['is_perusahaan'] = true;
         $title               = _l('edit', _l('perusahaan_lowercase'));
-        $this->load->model('taxes_model');
-        $data['taxes'] = $this->taxes_model->get();
-        $this->load->model('invoice_items_model');
-        $data['ajaxItems'] = false;
-        if (total_rows(db_prefix() . 'items') <= ajax_on_total_items()) {
-            $data['items'] = $this->invoice_items_model->get_grouped();
-        } else {
-            $data['items']     = [];
-            $data['ajaxItems'] = true;
-        }
-        $data['items_groups'] = $this->invoice_items_model->get_groups();
+        
+        $data['jenis_pesawat'] = $this->perusahaan_model->get_jenis_pesawat();
+
+        //$this->load->model('taxes_model');
+        //$data['taxes'] = $this->taxes_model->get();
+        //$this->load->model('jenis_pesawat_model');
+        //$data['ajaxItems'] = false;
+        //if (total_rows(db_prefix() . 'items') <= ajax_on_total_items()) {
+        //    $data['items'] = $this->jenis_pesawat_model->get_grouped();
+        //} else {
+        //    $data['items']     = [];
+        //    $data['ajaxItems'] = true;
+        //}
+        //$data['kelompok_alat'] = $this->jenis_pesawat_model->get_groups();
 
         $data['statuses']      = $this->perusahaan_model->get_statuses();
         $data['staff']         = $this->staff_model->get('', ['active' => 1]);
@@ -732,7 +419,7 @@ class Perusahaan extends AdminController
         }
 
 
-        //$this->perusahaan_mail_template->set_rel_id($perusahaan->id);
+        //$this->perusahaan_mail_template->set_clientid($perusahaan->id);
         include_once(module_libs_path(PERUSAHAAN_MODULE_NAME) . 'mails/Perusahaan_send_to_customer.php');
 
         //$data = perusahaan_prepare_mail_preview_data('perusahaan_send_to_customer', $perusahaan->email);
@@ -748,6 +435,7 @@ class Perusahaan extends AdminController
 
         $merge_fields = array_merge($merge_fields, $this->app_merge_fields->get_flat('perusahaan', 'other', '{email_signature}'));
 
+        $data['activity']          = $this->perusahaan_model->get_perusahaan_activity($id);
         $data['perusahaan_statuses']     = $this->perusahaan_model->get_statuses();
         $data['members']               = $this->staff_model->get('', ['active' => 1]);
         $data['perusahaan_merge_fields'] = $merge_fields;
@@ -761,11 +449,43 @@ class Perusahaan extends AdminController
         }
     }
 
-    public function add_note($rel_id)
+    public function get_perusahaan_total()
     {
-        if ($this->input->post() && user_can_view_perusahaan($rel_id)) {
-            $this->misc_model->add_note($this->input->post(), 'perusahaan', $rel_id);
-            echo $rel_id;
+        if ($this->input->post()) {
+            $data['totals'] = $this->perusahaan_model->get_perusahaan_total($this->input->post());
+
+            $this->load->model('currencies_model');
+
+            if (!$this->input->post('customer_id')) {
+                $multiple_currencies = call_user_func('is_using_multiple_currencies', db_prefix() . 'perusahaan');
+            } else {
+                $multiple_currencies = call_user_func('is_client_using_multiple_currencies', $this->input->post('customer_id'), db_prefix() . 'perusahaan');
+            }
+
+            if ($multiple_currencies) {
+                $data['currencies'] = $this->currencies_model->get();
+            }
+
+            $data['perusahaan_years'] = $this->perusahaan_model->get_perusahaan_years();
+
+            if (
+                count($data['perusahaan_years']) >= 1
+                && !\app\services\utilities\Arr::inMultidimensional($data['perusahaan_years'], 'year', date('Y'))
+            ) {
+                array_unshift($data['perusahaan_years'], ['year' => date('Y')]);
+            }
+
+            $data['_currency'] = $data['totals']['currencyid'];
+            unset($data['totals']['currencyid']);
+            $this->load->view('admin/perusahaan/perusahaan_total_template', $data);
+        }
+    }
+    
+    public function add_note($clientid)
+    {
+        if ($this->input->post() && user_can_view_perusahaan($clientid)) {
+            $this->misc_model->add_note($this->input->post(), 'perusahaan', $clientid);
+            echo $clientid;
         }
     }
 
@@ -847,15 +567,15 @@ class Perusahaan extends AdminController
         $data['taxes']         = $this->taxes_model->get();
         $data['currencies']    = $this->currencies_model->get();
         $data['base_currency'] = $this->currencies_model->get_base_currency();
-        $this->load->model('invoice_items_model');
+        $this->load->model('jenis_pesawat_model');
         $data['ajaxItems'] = false;
         if (total_rows(db_prefix() . 'items') <= ajax_on_total_items()) {
-            $data['items'] = $this->invoice_items_model->get_grouped();
+            $data['items'] = $this->jenis_pesawat_model->get_grouped();
         } else {
             $data['items']     = [];
             $data['ajaxItems'] = true;
         }
-        $data['items_groups'] = $this->invoice_items_model->get_groups();
+        $data['kelompok_alat'] = $this->jenis_pesawat_model->get_groups();
 
         $data['staff']          = $this->staff_model->get('', ['active' => 1]);
         $data['perusahaan']       = $this->perusahaan_model->get($id);
@@ -863,14 +583,14 @@ class Perusahaan extends AdminController
         $data['add_items']      = $this->_parse_items($data['perusahaan']);
 
         if ($data['perusahaan']->rel_type == 'lead') {
-            $this->db->where('leadid', $data['perusahaan']->rel_id);
+            $this->db->where('leadid', $data['perusahaan']->clientid);
             $data['customer_id'] = $this->db->get(db_prefix() . 'clients')->row()->userid;
         } else {
-            $data['customer_id'] = $data['perusahaan']->rel_id;
+            $data['customer_id'] = $data['perusahaan']->clientid;
         }
         $data['custom_fields_rel_transfer'] = [
             'belongs_to' => 'perusahaan',
-            'rel_id'     => $id,
+            'clientid'     => $id,
         ];
         $this->load->view('admin/perusahaan/invoice_convert_template', $data);
     }
@@ -881,15 +601,15 @@ class Perusahaan extends AdminController
         $data['taxes']         = $this->taxes_model->get();
         $data['currencies']    = $this->currencies_model->get();
         $data['base_currency'] = $this->currencies_model->get_base_currency();
-        $this->load->model('invoice_items_model');
+        $this->load->model('jenis_pesawat_model');
         $data['ajaxItems'] = false;
         if (total_rows(db_prefix() . 'items') <= ajax_on_total_items()) {
-            $data['items'] = $this->invoice_items_model->get_grouped();
+            $data['items'] = $this->jenis_pesawat_model->get_grouped();
         } else {
             $data['items']     = [];
             $data['ajaxItems'] = true;
         }
-        $data['items_groups'] = $this->invoice_items_model->get_groups();
+        $data['kelompok_alat'] = $this->jenis_pesawat_model->get_groups();
 
         $data['staff']     = $this->staff_model->get('', ['active' => 1]);
         $data['perusahaan']  = $this->perusahaan_model->get($id);
@@ -898,15 +618,15 @@ class Perusahaan extends AdminController
         $this->load->model('perusahaan_model');
         $data['perusahaan_statuses'] = $this->perusahaan_model->get_statuses();
         if ($data['perusahaan']->rel_type == 'lead') {
-            $this->db->where('leadid', $data['perusahaan']->rel_id);
+            $this->db->where('leadid', $data['perusahaan']->clientid);
             $data['customer_id'] = $this->db->get(db_prefix() . 'clients')->row()->userid;
         } else {
-            $data['customer_id'] = $data['perusahaan']->rel_id;
+            $data['customer_id'] = $data['perusahaan']->clientid;
         }
 
         $data['custom_fields_rel_transfer'] = [
             'belongs_to' => 'perusahaan',
-            'rel_id'     => $id,
+            'clientid'     => $id,
         ];
 
         $this->load->view('admin/perusahaan/perusahaan_convert_template', $data);
@@ -1024,9 +744,9 @@ class Perusahaan extends AdminController
         redirect(admin_url('perusahaan'));
     }
 
-    public function get_relation_data_values($rel_id, $rel_type)
+    public function get_relation_data_values($clientid)
     {
-        echo json_encode($this->perusahaan_model->get_relation_data_values($rel_id, $rel_type));
+        echo json_encode($this->perusahaan_model->get_relation_data_values($clientid));
     }
 
     public function add_perusahaan_comment()

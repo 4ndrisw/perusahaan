@@ -20,7 +20,7 @@ if (!$CI->db->table_exists(db_prefix() . 'perusahaan')) {
       `currency` int(11) NOT NULL,
       `open_till` date DEFAULT NULL,
       `date` date NOT NULL,
-      `rel_id` int(11) DEFAULT NULL,
+      `clientid` int(11) DEFAULT NULL,
       `rel_type` varchar(40) DEFAULT NULL,
       `assigned` int(11) DEFAULT NULL,
       `hash` varchar(32) NOT NULL,

@@ -12,13 +12,13 @@ class Perusahaan_pdf extends App_pdf
 
     public function __construct($perusahaan, $tag = '')
     {
-        if ($perusahaan->rel_id != null && $perusahaan->rel_type == 'customer') {
-            $this->load_language($perusahaan->rel_id);
-        } else if ($perusahaan->rel_id != null && $perusahaan->rel_type == 'lead') {
+        if ($perusahaan->clientid != null && $perusahaan->rel_type == 'customer') {
+            $this->load_language($perusahaan->clientid);
+        } else if ($perusahaan->clientid != null && $perusahaan->rel_type == 'lead') {
             $CI = &get_instance();
 
-            $this->load_language($perusahaan->rel_id);
-            $CI->db->select('default_language')->where('id', $perusahaan->rel_id);
+            $this->load_language($perusahaan->clientid);
+            $CI->db->select('default_language')->where('id', $perusahaan->clientid);
             $language = $CI->db->get('leads')->row()->default_language;
 
             load_pdf_language($language);
@@ -43,13 +43,13 @@ class Perusahaan_pdf extends App_pdf
 
     public function prepare()
     {
-        $number_word_lang_rel_id = 'unknown';
+        $number_word_lang_clientid = 'unknown';
 
         if ($this->perusahaan->rel_type == 'customer') {
-            $number_word_lang_rel_id = $this->perusahaan->rel_id;
+            $number_word_lang_clientid = $this->perusahaan->clientid;
         }
 
-        $this->with_number_to_word($number_word_lang_rel_id);
+        $this->with_number_to_word($number_word_lang_clientid);
 
         $total = '';
         if ($this->perusahaan->total != 0) {

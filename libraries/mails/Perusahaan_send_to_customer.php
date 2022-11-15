@@ -39,8 +39,8 @@ class Perusahaan_send_to_customer extends App_mail_template
         }
 
         $this->to($this->contact->email)
-        ->set_rel_id($this->perusahaan->id)
-        ->set_merge_fields('client_merge_fields', $this->perusahaan->client_id, $this->contact->id)
+        ->set_clientid($this->perusahaan->id)
+        ->set_merge_fields('client_merge_fields', $this->perusahaan->clientid, $this->contact->id)
         ->set_merge_fields('perusahaan_merge_fields', $this->perusahaan->id);
     }
 }

@@ -14,6 +14,7 @@ $lang['perusahaan_status_revised'] = 'Revised';
 $lang['perusahaan_status_declined'] = 'Declined';
 $lang['perusahaan_status_accepted'] = 'Accepted';
 $lang['perusahaan_expired'] = 'Expired';
+$lang['perusahaan_mark_as']                = 'Mark as %s';
 $lang['perusahaan'] = 'Perusahaan';
 $lang['perusahaan_leads_related'] = 'Leads';
 $lang['perusahaan_customers_related'] = 'Customers';
@@ -21,7 +22,7 @@ $lang['perusahaan_subject'] = 'Subject';
 $lang['perusahaan_to'] = 'To';
 $lang['perusahaan_total'] = 'Total';
 $lang['perusahaan_date'] = 'Date';
-$lang['perusahaan_open_till'] = 'Open till';
+$lang['perusahaan_open_till'] = 'Valid untill';
 $lang['perusahaan_date_created'] = 'Date created';
 $lang['perusahaan_status'] = 'Status';
 
@@ -47,3 +48,7 @@ $lang['perusahaan_lowercase'] = 'perusahaan';
 $lang['perusahaan_send_to_email_title'] = 'Title';
 $lang['perusahaan_attach_pdf'] = 'Attach PDF';
 $lang['perusahaan_preview_template'] = 'Preview';
+
+$lang['perusahaan_dt_tbl_to'] = 'Owner';
+$lang['nomor_seri'] = 'Serial Number';
+$lang['nomor_unit'] = 'Unit Number';

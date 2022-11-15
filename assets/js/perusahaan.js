@@ -10,13 +10,46 @@ if ($("body").hasClass('perusahaan-pipeline')) {
 }
 */
 
-// Ajax unit search but only for specific instansi
-function init_ajax_unit_search_by_instansi_id(selector) {
-    selector = typeof (selector) == 'undefined' ? '#unit_id.ajax-search' : selector;
-    init_ajax_search('unit', selector, {
-        instansi_id: function () {
-            return $('#instansi_id').val();
+// perusahaan quick total stats
+function init_perusahaan_total(manual) {
+
+    if ($('#perusahaan_total').length === 0) {
+        return;
+    }
+    var _est_total_href_manual = $('.perusahaan-total');
+    if ($("body").hasClass('perusahaan-total-manual') && typeof (manual) == 'undefined' &&
+        !_est_total_href_manual.hasClass('initialized')) {
+        return;
+    }
+    _est_total_href_manual.addClass('initialized');
+    var currency = $("body").find('select[name="total_currency"]').val();
+    var _years = $("body").find('select[name="perusahaan_total_years"]').selectpicker('val');
+    var years = [];
+    $.each(_years, function (i, _y) {
+        if (_y !== '') {
+            years.push(_y);
         }
+    });
+
+    var customer_id = '';
+    var project_id = '';
+
+    var _customer_id = $('.customer_profile input[name="userid"]').val();
+    var _project_id = $('input[name="project_id"]').val();
+    if (typeof (_customer_id) != 'undefined') {
+        customer_id = _customer_id;
+    } else if (typeof (_project_id) != 'undefined') {
+        project_id = _project_id;
+    }
+
+    $.post(admin_url + 'perusahaan/get_perusahaan_total', {
+        currency: currency,
+        init_total: true,
+        years: years,
+        customer_id: customer_id,
+        project_id: project_id,
+    }).done(function (response) {
+        $('#perusahaan_total').html(response);
     });
 }
 
@@ -126,7 +159,7 @@ function save_perusahaan_content(manual) {
 }
 
 // Proposal sync data in case eq mail is changed, shown for lead and customers.
-function sync_perusahaan_data(rel_id, rel_type) {
+function sync_perusahaan_data(clientid, rel_type) {
     var data = {};
     var modal_sync = $('#sync_data_perusahaan_data');
     data.country = modal_sync.find('select[name="country"]').val();
@@ -135,7 +168,7 @@ function sync_perusahaan_data(rel_id, rel_type) {
     data.city = modal_sync.find('input[name="city"]').val();
     data.address = modal_sync.find('textarea[name="address"]').val();
     data.phone = modal_sync.find('input[name="phone"]').val();
-    data.rel_id = rel_id;
+    data.clientid = clientid;
     data.rel_type = rel_type;
     $.post(admin_url + 'perusahaan/sync_data', data).done(function (response) {
         response = JSON.parse(response);
@@ -150,9 +183,9 @@ function delete_perusahaan_attachment(id) {
     if (confirm_delete()) {
         requestGet('perusahaan/delete_attachment/' + id).done(function (success) {
             if (success == 1) {
-                var rel_id = $("body").find('input[name="_attachment_sale_id"]').val();
+                var clientid = $("body").find('input[name="_attachment_sale_id"]').val();
                 $("body").find('[data-attachment-id="' + id + '"]').remove();
-                $("body").hasClass('perusahaan-pipeline') ? perusahaan_pipeline_open(rel_id) : init_perusahaan(rel_id);
+                $("body").hasClass('perusahaan-pipeline') ? perusahaan_pipeline_open(clientid) : init_perusahaan(clientid);
             }
         }).fail(function (error) {
             alert_float('danger', error.responseText);
@@ -253,10 +286,10 @@ function validate_perusahaan_form(selector) {
     selector = typeof (selector) == 'undefined' ? '#perusahaan-form' : selector;
 
     appValidateForm($(selector), {
-        client_id: {
+        clientid: {
             required: {
                 depends: function () {
-                    var customerRemoved = $('select#client_id').hasClass('customer-removed');
+                    var customerRemoved = $('select#clientid').hasClass('customer-removed');
                     return !customerRemoved;
                 }
             }
@@ -374,15 +407,17 @@ function add_perusahaan_item_to_table(data, itemid){
 
 
 // From perusahaan table mark as
-function perusahaan_mark_as(status_id, perusahaan_id) {
+function perusahaan_mark_action_status(status_id, perusahaan_id) {
     var data = {};
     data.status = status_id;
     data.perusahaan_id = perusahaan_id;
-    $.post(admin_url + 'perusahaan/update_perusahaan_status', data).done(function (response) {
+    $.post(admin_url + 'perusahaan/mark_action_status/' + status_id +'/'+ perusahaan_id).done(function (response) {
         //table_perusahaan.DataTable().ajax.reload(null, false);
         reload_perusahaan_tables();
     });
 }
+
+
 
 // Reload all perusahaan possible table where the table data needs to be refreshed after an action is performed on task.
 function reload_perusahaan_tables() {

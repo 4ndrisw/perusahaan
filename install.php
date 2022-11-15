@@ -35,7 +35,7 @@ add_option('perusahaan_number_decrement_on_delete', 0);
 add_option('perusahaan_number_format', 4);
 add_option('perusahaan_year', date('Y'));
 add_option('exclude_perusahaan_from_client_area_with_draft_status', 1);
-add_option('predefined_client_note_perusahaan', '- Staf diatas untuk melakukan riksa uji pada peralatan tersebut.
+add_option('predefined_client_note_perusahaan', '- Staf diatas untuk melakukan riksa uji pada perusahaan tersebut.
 - Staf diatas untuk membuat dokumentasi riksa uji sesuai kebutuhan.');
 add_option('predefined_terms_perusahaan', '- Pelaksanaan riksa uji harus mengikuti prosedur yang ditetapkan perusahaan pemilik alat.
 - Dilarang membuat dokumentasi tanpa seizin perusahaan pemilik alat.

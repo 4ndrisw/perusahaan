@@ -8,13 +8,13 @@
              echo form_hidden('isedit',$perusahaan->id);
             }
          $rel_type = '';
-            $rel_id = '';
-            if(isset($perusahaan) || ($this->input->get('rel_id') && $this->input->get('rel_type'))){
-             if($this->input->get('rel_id')){
-               $rel_id = $this->input->get('rel_id');
+            $clientid = '';
+            if(isset($perusahaan) || ($this->input->get('clientid') && $this->input->get('rel_type'))){
+             if($this->input->get('clientid')){
+               $clientid = $this->input->get('clientid');
                $rel_type = $this->input->get('rel_type');
              } else {
-               $rel_id = $perusahaan->rel_id;
+               $clientid = $perusahaan->clientid;
                $rel_type = $perusahaan->rel_type;
              }
             }
@@ -50,12 +50,12 @@
                               <option value="customer" <?php if((isset($perusahaan) &&  $perusahaan->rel_type == 'customer') || $this->input->get('rel_type')){if($rel_type == 'customer'){echo 'selected';}} ?>><?php echo _l('perusahaan_for_customer'); ?></option>
                            </select>
                         </div>
-                        <div class="form-group select-placeholder<?php if($rel_id == ''){echo ' hide';} ?> " id="rel_id_wrapper">
-                           <label for="rel_id"><span class="rel_id_label"></span></label>
-                           <div id="rel_id_select">
-                              <select name="rel_id" id="rel_id" class="ajax-search" data-width="100%" data-live-search="true" data-none-selected-text="<?php echo _l('dropdown_non_selected_tex'); ?>">
-                              <?php if($rel_id != '' && $rel_type != ''){
-                                 $rel_data = get_relation_data($rel_type,$rel_id);
+                        <div class="form-group select-placeholder<?php if($clientid == ''){echo ' hide';} ?> " id="clientid_wrapper">
+                           <label for="clientid"><span class="clientid_label"></span></label>
+                           <div id="clientid_select">
+                              <select name="clientid" id="clientid" class="ajax-search" data-width="100%" data-live-search="true" data-none-selected-text="<?php echo _l('dropdown_non_selected_tex'); ?>">
+                              <?php if($clientid != '' && $rel_type != ''){
+                                 $rel_data = get_relation_data($rel_type,$clientid);
                                  $rel_val = get_relation_values($rel_data,$rel_type);
                                     echo '<option value="'.$rel_val['id'].'" selected>'.$rel_val['name'].'</option>';
                                  } ?>
@@ -96,7 +96,7 @@
                               }
                             } else {
                               if($rel_type == 'customer'){
-                                $customer_currency = $this->clients_model->get_customer_default_currency($rel_id);
+                                $customer_currency = $this->clients_model->get_customer_default_currency($clientid);
                                 if($customer_currency != 0){
                                   $selected = $customer_currency;
                                 } else {
@@ -133,8 +133,8 @@
                               </div>
                             </div>
                            </div>
-                        <?php $fc_rel_id = (isset($perusahaan) ? $perusahaan->id : false); ?>
-                        <?php echo render_custom_fields('perusahaan',$fc_rel_id); ?>
+                        <?php $fc_clientid = (isset($perusahaan) ? $perusahaan->id : false); ?>
+                        <?php echo render_custom_fields('perusahaan',$fc_clientid); ?>
                          <div class="form-group no-mbot">
                            <label for="tags" class="control-label"><i class="fa fa-tag" aria-hidden="true"></i> <?php echo _l('tags'); ?></label>
                            <input type="text" class="tagsinput" id="tags" name="tags" value="<?php echo (isset($perusahaan) ? prep_tags_input(get_tags_in($perusahaan->id,'perusahaan')) : ''); ?>" data-role="tagsinput">
@@ -234,16 +234,16 @@
             </div>
          </div>
          <?php echo form_close(); ?>
-         <?php $this->load->view('admin/invoice_items/item'); ?>
+         <?php $this->load->view('admin/jenis_pesawat/item'); ?>
       </div>
       <div class="btn-bottom-pusher"></div>
    </div>
 </div>
 <?php init_tail(); ?>
 <script>
-   var _rel_id = $('#rel_id'),
+   var _clientid = $('#clientid'),
    _rel_type = $('#rel_type'),
-   _rel_id_wrapper = $('#rel_id_wrapper'),
+   _clientid_wrapper = $('#clientid_wrapper'),
    data = {};
 
    $(function(){
@@ -251,7 +251,7 @@
     // Maybe items ajax search
     init_ajax_search('items','#item_select.ajax-search',undefined,admin_url+'items/search');
     validate_perusahaan_form();
-    $('body').on('change','#rel_id', function() {
+    $('body').on('change','#clientid', function() {
      if($(this).val() != ''){
       $.get(admin_url + 'perusahaan/get_relation_data_values/' + $(this).val() + '/' + _rel_type.val(), function(response) {
         $('input[name="perusahaan_to"]').val(response.to);
@@ -294,37 +294,37 @@
     }, 'json');
     }
    });
-    $('.rel_id_label').html(_rel_type.find('option:selected').text());
+    $('.clientid_label').html(_rel_type.find('option:selected').text());
     _rel_type.on('change', function() {
-      var clonedSelect = _rel_id.html('').clone();
-      _rel_id.selectpicker('destroy').remove();
-      _rel_id = clonedSelect;
-      $('#rel_id_select').append(clonedSelect);
-      perusahaan_rel_id_select();
+      var clonedSelect = _clientid.html('').clone();
+      _clientid.selectpicker('destroy').remove();
+      _clientid = clonedSelect;
+      $('#clientid_select').append(clonedSelect);
+      perusahaan_clientid_select();
       if($(this).val() != ''){
-        _rel_id_wrapper.removeClass('hide');
+        _clientid_wrapper.removeClass('hide');
       } else {
-        _rel_id_wrapper.addClass('hide');
+        _clientid_wrapper.addClass('hide');
       }
-      $('.rel_id_label').html(_rel_type.find('option:selected').text());
+      $('.clientid_label').html(_rel_type.find('option:selected').text());
     });
-    perusahaan_rel_id_select();
-    <?php if(!isset($perusahaan) && $rel_id != ''){ ?>
-      _rel_id.change();
+    perusahaan_clientid_select();
+    <?php if(!isset($perusahaan) && $clientid != ''){ ?>
+      _clientid.change();
       <?php } ?>
     });
-   function perusahaan_rel_id_select(){
+   function perusahaan_clientid_select(){
       var serverData = {};
-      serverData.rel_id = _rel_id.val();
+      serverData.clientid = _clientid.val();
       data.type = _rel_type.val();
-      init_ajax_search(_rel_type.val(),_rel_id,serverData);
+      init_ajax_search(_rel_type.val(),_clientid,serverData);
    }
    function validate_perusahaan_form(){
       appValidateForm($('#perusahaan-form'), {
         subject : 'required',
         perusahaan_to : 'required',
         rel_type: 'required',
-        rel_id : 'required',
+        clientid : 'required',
         date : 'required',
         email: {
          email:true,

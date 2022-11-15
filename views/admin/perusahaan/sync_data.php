@@ -35,7 +35,7 @@
    </div>
    <div class="modal-footer">
 
-    <button type="button" class="btn btn-info" onclick="sync_perusahaan_data(<?php echo $rel_id; ?>,'<?php echo $rel_type; ?>');"><?php echo _l('sync_now'); ?></button>
+    <button type="button" class="btn btn-info" onclick="sync_perusahaan_data(<?php echo $clientid; ?>,'<?php echo $rel_type; ?>');"><?php echo _l('sync_now'); ?></button>
   </div>
 </div><!-- /.modal-content -->
 </div><!-- /.modal-dialog -->

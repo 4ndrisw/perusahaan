@@ -5,7 +5,7 @@ if (!$CI->db->table_exists(db_prefix() . 'perusahaan_activity')) {
     $CI->db->query('CREATE TABLE `' . db_prefix() . "perusahaan_activity` (
       `id` int(11) NOT NULL,
       `rel_type` varchar(20) DEFAULT NULL,
-      `rel_id` int(11) NOT NULL,
+      `clientid` int(11) NOT NULL,
       `description` text NOT NULL,
       `additional_data` text DEFAULT NULL,
       `staffid` varchar(11) DEFAULT NULL,

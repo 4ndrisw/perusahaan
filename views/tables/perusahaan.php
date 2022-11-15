@@ -8,10 +8,9 @@ $aColumns = [
     db_prefix() . 'perusahaan.id',
     'subject',
     'perusahaan_to',
-    'total',
-    'date',
+    'nomor_seri',
+    'nomor_unit',
     'open_till',
-    '(SELECT GROUP_CONCAT(name SEPARATOR ",") FROM ' . db_prefix() . 'taggables JOIN ' . db_prefix() . 'tags ON ' . db_prefix() . 'taggables.tag_id = ' . db_prefix() . 'tags.id WHERE rel_id = ' . db_prefix() . 'perusahaan.id and rel_type="perusahaan" ORDER by tag_order ASC) as tags',
     'datecreated',
     'status',
 ];
@@ -75,28 +74,9 @@ if (!has_permission('perusahaan', '', 'view')) {
 }
 
 $join          = [];
-$custom_fields = get_table_custom_fields('perusahaan');
-
-foreach ($custom_fields as $key => $field) {
-    $selectAs = (is_cf_date($field) ? 'date_picker_cvalue_' . $key : 'cvalue_' . $key);
-
-    array_push($customFieldsColumns, $selectAs);
-    array_push($aColumns, 'ctable_' . $key . '.value as ' . $selectAs);
-    array_push($join, 'LEFT JOIN ' . db_prefix() . 'customfieldsvalues as ctable_' . $key . ' ON ' . db_prefix() . 'perusahaan.id = ctable_' . $key . '.relid AND ctable_' . $key . '.fieldto="' . $field['fieldto'] . '" AND ctable_' . $key . '.fieldid=' . $field['id']);
-}
-
-$aColumns = hooks()->apply_filters('perusahaan_table_sql_columns', $aColumns);
-
-// Fix for big queries. Some hosting have max_join_limit
-if (count($custom_fields) > 4) {
-    @$this->ci->db->query('SET SQL_BIG_SELECTS=1');
-}
 
 $result = data_tables_init($aColumns, $sIndexColumn, $sTable, $join, $where, [
-    'currency',
-    'rel_id',
-    'rel_type',
-    'invoice_id',
+    'clientid',
     'hash',
 ]);
 
@@ -122,33 +102,38 @@ foreach ($rResult as $aRow) {
     $row[] = $numberOutput;
 
     $row[] = '<a href="' . admin_url('perusahaan/list_perusahaan/' . $aRow[db_prefix() . 'perusahaan.id'] .'#/'. $aRow[db_prefix() . 'perusahaan.id']) . '" onclick="init_perusahaan(' . $aRow[db_prefix() . 'perusahaan.id'] . '); return false;">' . $aRow['subject'] . ' bb</a>';
-    $toOutput = '';
-    if ($aRow['rel_type'] == 'lead') {
-        $toOutput = '<a href="#" onclick="init_lead(' . $aRow['rel_id'] . ');return false;" target="_blank" data-toggle="tooltip" data-title="' . _l('lead') . '">' . $aRow['perusahaan_to'] . '</a>';
-    } elseif ($aRow['rel_type'] == 'customer') {
-        $toOutput = '<a href="' . admin_url('perusahaan/profil/' . $aRow['rel_id']) . '" target="_blank" data-toggle="tooltip" data-title="' . _l('client') . '">' . $aRow['perusahaan_to'] . '</a>';
-    }
+    $toOutput = $toOutput = '<a href="' . admin_url('clients/client/' . $aRow['clientid']) . '" target="_blank" data-toggle="tooltip" data-title="' . _l('client') . '">' . $aRow['perusahaan_to'] . '</a>';
 
     $row[] = $toOutput;
 
-    $amount = app_format_money($aRow['total'], ($aRow['currency'] != 0 ? get_currency($aRow['currency']) : $baseCurrency));
+    $row[] = $aRow['nomor_seri'];
 
-    if ($aRow['invoice_id']) {
-        $amount .= '<br /> <span class="hide"> - </span><span class="text-success">' . _l('perusahaan_invoiced') . '</span>';
-    }
-
-    $row[] = $amount;
-
-
-    $row[] = _d($aRow['date']);
+    $row[] = $aRow['nomor_unit'];
 
     $row[] = _d($aRow['open_till']);
 
-    $row[] = render_tags($aRow['tags']);
 
     $row[] = _d($aRow['datecreated']);
+            $statuses = $this->ci->perusahaan_model->get_statuses();
+            
 
-    $row[] = format_perusahaan_status($aRow['status']);
+    $dropdown =        '<div class="btn-group btn-group-status">';
+    $dropdown .=          format_perusahaan_dropdown($aRow['status']);
+    $dropdown .=          '<div class="dropdown-menu status">';
+                            foreach ($statuses as $perusahaanChangeStatus) {
+                                if ($aRow['status'] != $perusahaanChangeStatus) {
+                                    $dropdown .= 
+                                    '<li class="'. strtolower(format_perusahaan_dropdown($perusahaanChangeStatus,'',false)) .'">
+                                        <a href="#" onclick="perusahaan_mark_action_status(' . $perusahaanChangeStatus . ',' . $aRow[db_prefix() . 'perusahaan.id'] . '); return false;">
+                                         ' . format_perusahaan_dropdown($perusahaanChangeStatus,'',false) . '
+                                        </a>
+                                    </li>';
+                                }
+                            }
+
+    $dropdown .=          '</div>';
+    $dropdown .=        '</div>';
+    $row[] = $dropdown;
 
     // Custom fields add values
     foreach ($customFieldsColumns as $customFieldColumn) {
@@ -156,8 +141,6 @@ foreach ($rResult as $aRow) {
     }
 
     $row['DT_RowClass'] = 'has-row-options';
-
-    $row = hooks()->apply_filters('perusahaan_table_row_data', $row, $aRow);
 
     $output['aaData'][] = $row;
 }

@@ -81,7 +81,7 @@
             <?php echo render_input('settings[perusahaan_pipeline_limit]','pipeline_limit_status',get_option('perusahaan_pipeline_limit')); ?>
          </div>
          <div class="col-md-7">
-            <label for="default_proposals_pipeline_sort" class="control-label"><?php echo _l('default_pipeline_sort'); ?></label>
+            <label for="default_perusahaans_pipeline_sort" class="control-label"><?php echo _l('default_pipeline_sort'); ?></label>
             <select name="settings[default_perusahaan_pipeline_sort]" id="default_perusahaan_pipeline_sort" class="selectpicker" data-width="100%" data-none-selected-text="<?php echo _l('dropdown_non_selected_tex'); ?>">
                <option value="datecreated" <?php if(get_option('default_perusahaan_pipeline_sort') == 'datecreated'){echo 'selected'; }?>><?php echo _l('perusahaan_sort_datecreated'); ?></option>
                <option value="date" <?php if(get_option('default_perusahaan_pipeline_sort') == 'date'){echo 'selected'; }?>><?php echo _l('perusahaan_sort_perusahaan_date'); ?></option>

@@ -38,3 +38,32 @@ body table.perusahaan-items-preview td.description span strong{
 body table.perusahaan-items-preview td.description span {
     color: #989898 !important;
 }
+.btn-group-status{
+    min-width: 102px;
+}
+.btn-status{
+    min-width: 85px;    
+}
+.dropdown-toggle{
+    height: 29px;
+}
+
+.dropdown-menu.status>li.revised>a:hover{
+    background-color: #ff6f00;
+    color: #f9f9f9;
+}
+.dropdown-menu.status>li.sent>a:hover{
+    background-color: #026e9e;
+    color: #f9f9f9;
+}
+.dropdown-menu.status>li.accepted>a:hover{
+    background-color: #74b31b;
+}
+.dropdown-menu.status>li.open>a:hover{
+    background-color: #74b31b;
+    color: #f9f9f9;
+}
+.dropdown-menu.status>li.declined>a:hover{
+    background-color: #cf0318;
+    color: #f9f9f9;
+}

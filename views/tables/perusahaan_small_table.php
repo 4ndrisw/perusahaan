@@ -11,7 +11,7 @@ $aColumns = [
     'total',
     'date',
     'open_till',
-    '(SELECT GROUP_CONCAT(name SEPARATOR ",") FROM ' . db_prefix() . 'taggables JOIN ' . db_prefix() . 'tags ON ' . db_prefix() . 'taggables.tag_id = ' . db_prefix() . 'tags.id WHERE rel_id = ' . db_prefix() . 'perusahaan.id and rel_type="perusahaan" ORDER by tag_order ASC) as tags',
+    '(SELECT GROUP_CONCAT(name SEPARATOR ",") FROM ' . db_prefix() . 'taggables JOIN ' . db_prefix() . 'tags ON ' . db_prefix() . 'taggables.tag_id = ' . db_prefix() . 'tags.id WHERE clientid = ' . db_prefix() . 'perusahaan.id and rel_type="perusahaan" ORDER by tag_order ASC) as tags',
     'datecreated',
     'status',
 ];
@@ -94,7 +94,7 @@ if (count($custom_fields) > 4) {
 
 $result = data_tables_init($aColumns, $sIndexColumn, $sTable, $join, $where, [
     'currency',
-    'rel_id',
+    'clientid',
     'rel_type',
     'invoice_id',
     'hash',
@@ -121,12 +121,8 @@ foreach ($rResult as $aRow) {
 
     $row[] = '<a href="' . admin_url('perusahaan/list_perusahaan/' . $aRow[db_prefix() . 'perusahaan.id']) . '" onclick="init_perusahaan(' . $aRow[db_prefix() . 'perusahaan.id'] . '); return false;">' . $aRow['subject'] . '</a>';
 
-    $toOutput = '';
-    if ($aRow['rel_type'] == 'lead') {
-        $toOutput = '<a href="#" onclick="init_lead(' . $aRow['rel_id'] . ');return false;" target="_blank" data-toggle="tooltip" data-title="' . _l('lead') . '">' . $aRow['perusahaan_to'] . '</a>';
-    } elseif ($aRow['rel_type'] == 'customer') {
-        $toOutput = '<a href="' . admin_url('perusahaan/profil/' . $aRow['rel_id']) . '" target="_blank" data-toggle="tooltip" data-title="' . _l('client') . '">' . $aRow['perusahaan_to'] . '</a>';
-    }
+    $toOutput = $toOutput = '<a href="' . admin_url('clients/client/' . $aRow['clientid']) . '" target="_blank" data-toggle="tooltip" data-title="' . _l('client') . '">' . $aRow['perusahaan_to'] . '</a>';
+
 
     $row[] = $toOutput;
 

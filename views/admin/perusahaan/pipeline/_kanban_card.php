@@ -13,9 +13,9 @@
             <span class="mbot10 inline-block full-width">
             <?php
                if($perusahaan['rel_type'] == 'lead'){
-                 echo '<a href="'.admin_url('leads/index/'.$perusahaan['rel_id']).'" onclick="init_lead('.$perusahaan['rel_id'].'); return false;" data-toggle="tooltip" data-title="'._l('lead').'">' .$perusahaan['perusahaan_to'].'</a><br />';
+                 echo '<a href="'.admin_url('leads/index/'.$perusahaan['clientid']).'" onclick="init_lead('.$perusahaan['clientid'].'); return false;" data-toggle="tooltip" data-title="'._l('lead').'">' .$perusahaan['perusahaan_to'].'</a><br />';
                } else if($perusahaan['rel_type'] == 'customer'){
-                 echo '<a href="'.admin_url('clients/client/'.$perusahaan['rel_id']).'" data-toggle="tooltip" data-title="'._l('client').'">' .$perusahaan['perusahaan_to'].'</a><br />';
+                 echo '<a href="'.admin_url('clients/client/'.$perusahaan['clientid']).'" data-toggle="tooltip" data-title="'._l('client').'">' .$perusahaan['perusahaan_to'].'</a><br />';
                }
                ?>
             </span>

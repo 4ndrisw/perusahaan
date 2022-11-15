@@ -1,6 +1,5 @@
 <?php
 
-use modules\perusahaan\services\PerusahaanProfileBadges;
 defined('BASEPATH') or exit('No direct script access allowed');
 
 /**
@@ -160,28 +159,68 @@ function perusahaan_status_color_class($id, $replace_default_by_muted = false)
 function format_perusahaan_status($status, $classes = '', $label = true)
 {
     $id = $status;
+    $label_class = 'default';
+
     if ($status == 1) {
-        $status      = _l('perusahaan_status_open');
-        $label_class = 'default';
-    } elseif ($status == 2) {
-        $status      = _l('perusahaan_status_declined');
-        $label_class = 'danger';
-    } elseif ($status == 3) {
-        $status      = _l('perusahaan_status_accepted');
-        $label_class = 'success';
-    } elseif ($status == 4) {
-        $status      = _l('perusahaan_status_sent');
-        $label_class = 'info';
-    } elseif ($status == 5) {
-        $status      = _l('perusahaan_status_revised');
-        $label_class = 'info';
-    } elseif ($status == 6) {
         $status      = _l('perusahaan_status_draft');
         $label_class = 'default';
+    } elseif ($status == 2) {
+        $status      = _l('perusahaan_status_sent');
+        $label_class = 'info';
+    } elseif ($status == 3) {
+        $status      = _l('perusahaan_status_open');
+        $label_class = 'warning';
+    } elseif ($status == 4) {
+        $status      = _l('perusahaan_status_revised');
+        $label_class = 'info';
+    } elseif ($status == 5) {
+        $status      = _l('perusahaan_status_declined');
+        $label_class = 'danger';
+    } elseif ($status == 6) {
+        $status      = _l('perusahaan_status_accepted');
+        $label_class = 'success';
     }
 
     if ($label == true) {
         return '<span class="label label-' . $label_class . ' ' . $classes . ' s-status perusahaan-status-' . $id . '">' . $status . '</span>';
+    }
+
+    return $status;
+}
+
+function format_perusahaan_dropdown($status, $classes = '', $label = true)
+{
+    $id = $status;
+    $label_class = 'default';
+
+    if ($status == 1) {
+        $status      = _l('perusahaan_status_draft');
+        $label_class = 'default';
+    } elseif ($status == 2) {
+        $status      = _l('perusahaan_status_sent');
+        $label_class = 'info';
+    } elseif ($status == 3) {
+        $status      = _l('perusahaan_status_open');
+        $label_class = 'warning';
+    } elseif ($status == 4) {
+        $status      = _l('perusahaan_status_revised');
+        $label_class = 'info';
+    } elseif ($status == 5) {
+        $status      = _l('perusahaan_status_declined');
+        $label_class = 'danger';
+    } elseif ($status == 6) {
+        $status      = _l('perusahaan_status_accepted');
+        $label_class = 'success';
+    }
+
+    if ($label == true) {
+    
+        $button =  '<button type="button" class="btn btn-xs btn-block btn-'. $label_class .' dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">';
+        $button .= $status;
+        $button .= '</button>';
+
+        return $button;
+        //        return '<span class="-' . $label_class . ' ' . $classes . ' s-status perusahaan-status-' . $id . '">' . $status . '</span>';
     }
 
     return $status;
@@ -197,27 +236,6 @@ function format_perusahaan_number($id)
     $format = get_option('perusahaan_number_prefix') . str_pad($id, get_option('number_padding_prefixes'), '0', STR_PAD_LEFT);
 
     return hooks()->apply_filters('perusahaan_number_format', $format, $id);
-}
-
-
-/**
- * Function that return perusahaan item taxes based on passed item id
- * @param  mixed $itemid
- * @return array
- */
-function get_perusahaan_item_taxes($itemid)
-{
-    $CI = &get_instance();
-    $CI->db->where('itemid', $itemid);
-    $CI->db->where('rel_type', 'perusahaan');
-    $taxes = $CI->db->get(db_prefix() . 'item_tax')->result_array();
-    $i     = 0;
-    foreach ($taxes as $tax) {
-        $taxes[$i]['taxname'] = $tax['taxname'] . '|' . $tax['taxrate'];
-        $i++;
-    }
-
-    return $taxes;
 }
 
 
@@ -313,6 +331,7 @@ function user_can_view_perusahaan($id, $staff_id = false)
 
     return false;
 }
+
 function parse_perusahaan_content_merge_fields($perusahaan)
 {
     $id = is_array($perusahaan) ? $perusahaan['id'] : $perusahaan->id;
@@ -410,12 +429,7 @@ if (!function_exists('format_perusahaan_info')) {
         $email      = $perusahaan->email;
 
         if ($for == 'admin') {
-            $hrefAttrs = '';
-            if ($perusahaan->rel_type == 'lead') {
-                $hrefAttrs = ' href="#" onclick="init_lead(' . $perusahaan->rel_id . '); return false;" data-toggle="tooltip" data-title="' . _l('lead') . '"';
-            } else {
-                $hrefAttrs = ' href="' . admin_url('clients/client/' . $perusahaan->rel_id) . '" data-toggle="tooltip" data-title="' . _l('client') . '"';
-            }
+            $hrefAttrs = ' href="' . admin_url('clients/client/' . $perusahaan->clientid) . '" data-toggle="tooltip" data-title="' . _l('client') . '"';
             $perusahaanTo = '<a' . $hrefAttrs . '>' . $perusahaanTo . '</a>';
         }
 
@@ -550,42 +564,50 @@ function perusahaan_status_color_pdf($status_id)
     return hooks()->apply_filters('perusahaan_status_pdf_color', $statusColor, $status_id);
 }
 
-/**
- * Filter only visible tabs selected from the profile and add badge
- * @param  array $tabs available tabs
- * @param  int $id perusahaan
- * @return array
- */
-function filter_perusahaan_visible_tabs($tabs, $id = '')
-{
-    $newTabs = [];
-    $customerProfileBadges = null;
 
-    $visible = get_option('visible_customer_profile_tabs');
-    if ($visible != 'all') {
-        $visible = unserialize($visible);
+
+function perusahaan_tab_perusahaan($clients){
+
+ if(isset($clients)){ 
+    if($clients->is_perusahaan != 0){
+    ?>
+    <li role="presentation">
+        <a href="#perusahaan" aria-controls="perusahaan" role="tab" data-toggle="tab">
+        <?php echo _l('perusahaan'); ?>
+        </a>
+    </li>
+<?php }
+
     }
-
-    if ($id !== '') {
-        $customerProfileBadges = new PerusahaanProfileBadges($id);
-    }
-
-    $appliedSettings = is_array($visible);
-    foreach ($tabs as $key => $tab) {
-
-        // Check visibility from settings too
-        if ($key != 'profile' && $key != 'contacts' && $appliedSettings) {
-            if (array_key_exists($key, $visible) && $visible[$key] == false) {
-                continue;
-            }
-        }
-
-        if (!is_null($customerProfileBadges)) {
-            $tab['badge'] = $customerProfileBadges->getBadge($tab['slug']);
-        }
-
-        $newTabs[$key] = $tab;
-    }
-
-    return hooks()->apply_filters('perusahaan_filtered_visible_tabs', $newTabs);
 }
+
+function perusahaan_content_tab_perusahaan($client){
+     $CI  = &get_instance();
+    if(!empty($client)){
+    if($client->is_perusahaan != 0){
+        $checked = '';
+    ?>
+    <div class="checkbox checkbox-info mbot20 no-mtop is_preffered" style="display: none;">
+        <?php
+         if (isset($client) && ($client->is_perusahaan == 1)) {
+            $checked =  ' checked';
+          }
+           ?>
+                     <input type="checkbox" name="is_preffered" <?php echo $checked;?> value="1" id="is_preffered">
+                     <label for="is_preffered"><?php echo _l('preffered_perusahaan'); ?></label>
+                  </div>
+    <?php 
+        $CI->load->model(PERUSAHAAN_MODULE_NAME.'/perusahaan_model');
+        $data['statuses']              = $CI->perusahaan_model->get_statuses();
+        $data['years']                 = $CI->perusahaan_model->get_perusahaan_years();
+        $data['client'] = $client;
+        $data['CI'] = $CI;
+        if(isset($client)){ 
+            $CI->load->view(PERUSAHAAN_MODULE_NAME . '/admin/perusahaan/manage_tab',$data); 
+             
+         }
+     }
+ }
+}
+
+
